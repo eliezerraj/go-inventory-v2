@@ -25,6 +25,7 @@ type UseCase struct {
 
 type Repository struct {
 	ProductRepository repository.IProductRepository
+	InventoryPriceRepository repository.IInventoryPriceRepository
 }
 
 func NewApplication(cfg *config.Config) (*Application, error) {
@@ -74,7 +75,9 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 	}
 
 	productRepository := repository.NewProductRepository(dbConnector)
-	productUsecase := usecase.NewProductUseCase(productRepository)
+	inventoryPriceRepository := repository.NewInventoryPriceRepository(dbConnector)
+	
+	productUsecase := usecase.NewProductUseCase(productRepository, inventoryPriceRepository)
 
 	productController := controller.NewProductController(productUsecase)
 

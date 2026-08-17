@@ -16,20 +16,23 @@ import (
 
 type ProductUsecase struct {
 	productRepository repository.IProductRepository
+	inventoryPriceRepository repository.IInventoryPriceRepository
 }
 
 type IProductUseCase interface {
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
 	ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error)
 	ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error)
-	ProductInventoryPut(ctx context.Context, product entity.Product) (*entity.Product, error)
+	ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error)
 }
 
-func NewProductUseCase(productRepository repository.IProductRepository) IProductUseCase {
+func NewProductUseCase(productRepository repository.IProductRepository, 
+						inventoryPriceRepository repository.IInventoryPriceRepository) IProductUseCase {
 	logger.InfoOutCtx("initializing product usecase SUCCESSFULLY")
 
 	return &ProductUsecase{
 		productRepository: productRepository,
+		inventoryPriceRepository: inventoryPriceRepository,
 	}
 }
 
@@ -83,6 +86,32 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 		return nil, err
 	}
 
+	if product.Inventory != nil {
+		product.Inventory.ProductId = res.ID
+		product.Inventory.CreatedAt = &createAt
+		inv, err := p.inventoryPriceRepository.InventoryAdd(ctx, *product.Inventory)
+		if err != nil {
+			logger.ErrorOutCtx("product usecase ProductAdd failed to add inventory", zap.Error(err))
+			return nil, err
+		}
+		res.Inventory = inv
+	}
+
+	if product.Price != nil {
+		product.Price.ProductId = res.ID
+		product.Price.CreatedAt = &createAt
+		product.Price.StartedAt = &createAt
+		product.Price.EndedAt = &expiresAt
+
+		price, err := p.inventoryPriceRepository.PriceAdd(ctx, *product.Price)
+		if err != nil {
+			logger.ErrorOutCtx("product usecase ProductAdd failed to add price", zap.Error(err))
+			return nil, err
+		}
+
+		res.Price = price
+	}
+
 	logger.InfoOutCtx("product usecase ProductAdd completed SUCCESSFULLY")
 	return res, nil
 }
@@ -96,15 +125,27 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 		return nil, err
 	}
 
+	inv, err := p.inventoryPriceRepository.InventoryGet(ctx, entity.Inventory{ProductId: res.ID})
+	if err != nil {
+		logger.Warn(ctx, "product usecase ProductGet failed to get inventory", zap.Error(err))
+	}
+	res.Inventory = inv
+
+	price, err := p.inventoryPriceRepository.PriceGet(ctx, entity.Price{ProductId: res.ID})
+	if err != nil {
+		logger.Warn(ctx, "product usecase ProductGet failed to get price", zap.Error(err))
+	}
+	res.Price = price
+
 	return res, nil
 }
 
-func (p *ProductUsecase) ProductInventoryPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
-	logger.InfoOutCtx("product usecase ProductInventoryPut called")
+func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	logger.InfoOutCtx("product usecase ProductPut called")
 
-	res, err := p.productRepository.ProductInventoryPut(ctx, product)
+	res, err := p.productRepository.ProductPut(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductInventoryPut failed", zap.Error(err))
+		logger.ErrorOutCtx("product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 

@@ -21,7 +21,7 @@ type IProductRepository interface {
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
 	ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error)
 	ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error)
-	ProductInventoryPut(ctx context.Context, product entity.Product) (*entity.Product, error)
+	ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error)
 }
 
 func NewProductRepository(dbConnector connector.IDatabaseConnector) IProductRepository {
@@ -45,7 +45,7 @@ func (p *ProductRepository) BeginTx(ctx context.Context, opts pgx.TxOptions) (pg
 }
 
 func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
-	logger.InfoOutCtx("product repository ProductAdd called")
+	logger.Info(ctx, "product repository ProductAdd called")
 
 	connectorWriter := p.dbConnector.Writer()
 
@@ -76,7 +76,8 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	// Get a reader connection from the database connector
 	connectorReader := p.dbConnector.Reader()
 
-	query := `SELECT sku, 
+	query := `SELECT id,
+					 sku, 
 					 name, 
 					 status, 
 					 type
@@ -90,7 +91,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	defer rows.Close()
 
 	if rows.Next() {
-		err = rows.Scan(&product.Sku, &product.Name, &product.Status, &product.Type)
+		err = rows.Scan(&product.ID, &product.Sku, &product.Name, &product.Status, &product.Type)
 		if err != nil {
 			logger.Error(ctx, "failed to scan result", zap.Error(err))
 			return nil, err
@@ -102,8 +103,8 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	return &product, nil
 }
 
-func (p *ProductRepository) ProductInventoryPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
-	logger.InfoOutCtx("product repository ProductInventoryPut called")
+func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	logger.Info(ctx, "product repository ProductPut called")
 
 	return &product, nil
 }
