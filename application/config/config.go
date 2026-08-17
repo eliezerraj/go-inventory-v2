@@ -69,7 +69,6 @@ type Config struct {
 	App         App
 	HTTP        HTTP
 	Database    Database
-	//Otel		*go_core_otel_trace.EnvTrace
 	Scopes		Scopes
 	Log         Log
 	Authorization Authorization

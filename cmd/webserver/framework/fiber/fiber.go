@@ -42,8 +42,8 @@ func newAdapters(cfg *config.Config, application *application.Application) *http
 	logger.InfoOutCtx("initializing fiber adapters SUCCESSFULLY")
 
 	return &httpAdapter{
-		metadataAdp:   adapter.NewMetadataAdapter(cfg),
-		applicationAdp:   adapter.NewApplicationAdapter(cfg),
+		metadataAdp:   	adapter.NewMetadataAdapter(cfg),
+		applicationAdp:  adapter.NewApplicationAdapter(cfg, application),
 	}
 }
 
@@ -80,4 +80,6 @@ func (s *FiberServer) SetupRoutes(application *application.Application) {
 	appRoutes.Get("/info", adapters.metadataAdp.InfoGet)
 	appRoutes.Get("/echo-header", adapters.metadataAdp.HeadersGet)
 	appRoutes.Get("/echo-context", adapters.metadataAdp.ContextGet)
+	appRoutes.Get("/product/:sku", adapters.applicationAdp.ProductGet)
+	appRoutes.Post("/product", adapters.applicationAdp.ProductAdd)
 }

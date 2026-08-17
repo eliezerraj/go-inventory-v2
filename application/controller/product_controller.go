@@ -26,7 +26,11 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 	logger.InfoOutCtx("product controller ProductAdd called")
 
 	product := entity.Product{
+		Sku:         req.Sku,
 		Name:        req.Name,
+		Status:      req.Status,
+		Type:        req.Type,
+		LeadTime:    req.LeadTime,
 	}
 
 	res, err := p.productUseCase.ProductAdd(ctx, product)
@@ -39,10 +43,10 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 }
 
 func (p *ProductController) ProductGet(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
-	logger.InfoOutCtx("product controller ProductGet called")
+	logger.Info(ctx, "product controller ProductGet called", zap.String("sku", req.Sku))
 
 	product := entity.Product{
-		Name:        req.Name,
+		Sku: req.Sku,
 	}
 
 	res, err := p.productUseCase.ProductGet(ctx, product)

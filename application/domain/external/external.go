@@ -11,5 +11,5 @@ type ProductRequest struct {
 
 type ProductResponse struct {
 	Response    string	`json:"response"`
-	Data		any
+	Product		any	`json:"product"`
 }

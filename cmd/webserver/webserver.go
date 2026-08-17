@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"os"
 	"context"
 	"go.uber.org/zap"
 
@@ -9,8 +10,6 @@ import (
 	"github.com/go-inventory-v2/application/infrastructure/application"
 	"github.com/go-inventory-v2/cmd/webserver/framework/fiber"
 	"github.com/go-inventory-v2/application/config"
-
-	//"github.com/gofiber/fiber/v2"
 )
 
 type WebServer struct {
@@ -24,7 +23,11 @@ func NewWebServer(cfg *config.Config) *WebServer {
 	_, cancel := context.WithTimeout(context.Background(), cfg.Database.ConnTimeout)
 	defer cancel()
 
-	application := application.NewApplication()
+	application, err := application.NewApplication(cfg)
+	if err != nil {
+		logger.FatalOutCtx("failed to initialize application", zap.Error(err))
+		os.Exit(1)
+	}
 
 	fiberServer := fiber.NewFiberServer(cfg)
 	fiberServer.SetupRoutes(application)

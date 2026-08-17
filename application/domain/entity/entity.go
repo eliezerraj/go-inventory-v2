@@ -12,5 +12,6 @@ type Product struct {
 	Status		string 		`json:"status,omitempty"`
 	LeadTime	int			`json:"lead_time,omitempty"`
 	CreatedAt	*time.Time 	`json:"created_at,omitempty"`
+	ExpiresAt	*time.Time 	`json:"expires_at,omitempty"`
 	UpdatedAt	*time.Time 	`json:"updated_at,omitempty"`	
 }
