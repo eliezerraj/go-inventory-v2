@@ -38,11 +38,11 @@ func NewProductUseCase(productRepository repository.IProductRepository,
 }
 
 func (p *ProductUsecase) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error) {
-	logger.InfoOutCtx("product usecase BeginTx called")
+	logger.Info(ctx, "product usecase BeginTx called")
 
 	tx, err := p.productRepository.BeginTx(ctx, opts)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase BeginTx failed", zap.Error(err))
+		logger.Error(ctx, "product usecase BeginTx failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -50,22 +50,22 @@ func (p *ProductUsecase) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.T
 }
 
 func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
-	logger.InfoOutCtx("product usecase ProductAdd called")
+	logger.Info(ctx, "product usecase ProductAdd called")
 
 	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductAdd failed to begin transaction", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductAdd failed to begin transaction", zap.Error(err))
 		return nil, err
 	}
 
 	defer func() {
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				logger.ErrorOutCtx("product usecase ProductAdd failed to rollback transaction", zap.Error(rollbackErr))
+				logger.Error(ctx, "product usecase ProductAdd failed to rollback transaction", zap.Error(rollbackErr))
 			}
 		} else {
 			if commitErr := tx.Commit(ctx); commitErr != nil {
-				logger.ErrorOutCtx("product usecase ProductAdd failed to commit transaction", zap.Error(commitErr))
+				logger.Error(ctx, "product usecase ProductAdd failed to commit transaction", zap.Error(commitErr))
 				err = commitErr
 			}
 		}
@@ -78,12 +78,12 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 
 	res, err := p.productRepository.ProductAdd(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductAdd failed", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductAdd failed", zap.Error(err))
 		return nil, err
 	}
 
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductAdd failed to commit transaction", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductAdd failed to commit transaction", zap.Error(err))
 		return nil, err
 	}
 
@@ -92,7 +92,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 		product.Inventory.CreatedAt = &createAt
 		inv, err := p.inventoryPriceRepository.InventoryAdd(ctx, *product.Inventory)
 		if err != nil {
-			logger.ErrorOutCtx("product usecase ProductAdd failed to add inventory", zap.Error(err))
+			logger.Error(ctx, "product usecase ProductAdd failed to add inventory", zap.Error(err))
 			return nil, err
 		}
 		res.Inventory = inv
@@ -106,23 +106,23 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 
 		price, err := p.inventoryPriceRepository.PriceAdd(ctx, *product.Price)
 		if err != nil {
-			logger.ErrorOutCtx("product usecase ProductAdd failed to add price", zap.Error(err))
+			logger.Error(ctx, "product usecase ProductAdd failed to add price", zap.Error(err))
 			return nil, err
 		}
 
 		res.Price = price
 	}
 
-	logger.InfoOutCtx("product usecase ProductAdd completed SUCCESSFULLY")
+	logger.Info(ctx, "product usecase ProductAdd completed SUCCESSFULLY")
 	return res, nil
 }
 
 func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error) {
-	logger.InfoOutCtx("product usecase ProductGet called")
+	logger.Info(ctx, "product usecase ProductGet called")
 
 	res, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductGet failed", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductGet failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -142,23 +142,23 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 }
 
 func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
-	logger.InfoOutCtx("product usecase ProductPut called")
+	logger.Info(ctx, "product usecase ProductPut called")
 
 	// Start tx
 	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductPut failed to begin transaction", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductPut failed to begin transaction", zap.Error(err))
 		return nil, err
 	}
 
 	defer func() {
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
-				logger.ErrorOutCtx("product usecase ProductPut failed to rollback transaction", zap.Error(rollbackErr))
+				logger.Error(ctx, "product usecase ProductPut failed to rollback transaction", zap.Error(rollbackErr))
 			}
 		} else {
 			if commitErr := tx.Commit(ctx); commitErr != nil {
-				logger.ErrorOutCtx("product usecase ProductPut failed to commit transaction", zap.Error(commitErr))
+				logger.Error(ctx, "product usecase ProductPut failed to commit transaction", zap.Error(commitErr))
 				err = commitErr
 			}
 		}
@@ -167,7 +167,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Check if the product exists before updating
 	res_prod, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductPut failed", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		tx.Rollback(ctx)
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Update product
 	upd_prod, err := p.productRepository.ProductPut(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductPut failed", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -191,7 +191,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Update price
 	res_price, err := p.inventoryPriceRepository.PriceGet(ctx, entity.Price{ProductId: res_prod.ID})
 	if err != nil {
-		logger.Warn(ctx, "product usecase ProductGet failed to get inventory", zap.Error(err))
+		logger.Warn(ctx, "product usecase ProductPut failed to get inventory", zap.Error(err))
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 
 	upd_price, err := p.inventoryPriceRepository.PricePut(ctx, *product.Price)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductPut failed", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -222,7 +222,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	product.Inventory.UpdatedAt = &updatedAt
 	upd_inv, err := p.inventoryPriceRepository.InventoryPut(ctx, *product.Inventory)
 	if err != nil {
-		logger.ErrorOutCtx("product usecase ProductPut failed", zap.Error(err))
+		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 

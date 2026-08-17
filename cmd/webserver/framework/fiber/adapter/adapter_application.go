@@ -31,10 +31,10 @@ func NewApplicationAdapter(cfg *config.Config, application *application.Applicat
 
 // Adapter methods for ProductController 
 func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
-	logger.InfoOutCtx("ProductGet called")
-
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
+	
+	logger.Info(ctxWithTimeout, "ProductGet called")
 
 	logger.Debug(
 		ctxWithTimeout,
@@ -75,10 +75,10 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 }
 
 func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
-	logger.InfoOutCtx("ProductAdd called")
-
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
+
+	logger.Info(ctxWithTimeout, "ProductAdd called")
 
 	logger.Debug(
 		ctxWithTimeout,
@@ -122,10 +122,10 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 }
 
 func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
-	logger.InfoOutCtx("ProductPut called")
-
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
+
+	logger.Info(ctxWithTimeout, "ProductPut called")
 
 	logger.Debug(
 		ctxWithTimeout,

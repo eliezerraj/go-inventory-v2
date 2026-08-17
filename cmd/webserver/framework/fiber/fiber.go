@@ -5,7 +5,6 @@ import (
 	"github.com/json-iterator/go"
 
 	"github.com/gofiber/fiber/v2/middleware/compress"
-	"github.com/gofiber/fiber/v2/middleware/requestid"
 
 	"github.com/go-inventory-v2/cmd/webserver/framework/fiber/adapter"
 	"github.com/go-inventory-v2/application/config"
@@ -82,12 +81,7 @@ func setupMiddleware(cfg *config.Config, fiberApp *fiber.App) {
 	logger.InfoOutCtx("setting up middleware for fiber server")
 	
 	fiberApp.Use(middleware.HeaderMiddleware())
-
-	fiberApp.Use(requestid.New(
-		requestid.Config{
-			Header:     "x-request-id",
-		},
-	))
+	fiberApp.Use(middleware.RequestIDMiddleware())
 
 	fiberApp.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,

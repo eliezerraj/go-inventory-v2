@@ -8,8 +8,6 @@ import (
 
 	"github.com/caarlos0/env/v8"
 	"github.com/joho/godotenv"
-
-	//go_core_otel_trace "github.com/eliezerraj/go-core/v2/otel/trace"
 )
 
 type HTTP struct {
@@ -33,7 +31,7 @@ type Database struct {
 	Username              string        `env:"DB_USERNAME,required,notEmpty"`
 	Password              string        `env:"DB_PASSWORD,required,notEmpty"`
 	Name                  string        `env:"DB_NAME,required,notEmpty"`
-	Schema                string        `env:"DB_SCHEMA" envDefault:"munin"`
+	Schema                string        `env:"DB_SCHEMA" envDefault:"postgres"`
 	QueryTracer           bool          `env:"DATABASE_QUERY_TRACER" envDefault:"false"`
 	MaxConnections        int32         `env:"DB_MAX_CONNS" envDefault:"20"`
 	MinConnections        int32         `env:"DB_MIN_CONNS" envDefault:"4"`
@@ -56,8 +54,10 @@ type Authorization struct {
 }
 
 type App struct {
-	Name         string `env:"APP_NAME"`
-	Version      string `env:"VERSION" envDefault:"no-version"`
+	Name        string `env:"APP_NAME"`
+	Version     string `env:"VERSION" envDefault:"no-version"`
+	Env		  	string `env:"ENV" envDefault:"dev"`
+	Account	 	string `env:"ACCOUNT" envDefault:"local:localhost"`
 }
 
 type Log struct {
@@ -71,7 +71,14 @@ type Config struct {
 	Database    Database
 	Scopes		Scopes
 	Log         Log
+	OtelEnv		OtelEnv
 	Authorization Authorization
+}
+
+type OtelEnv struct {
+	OtelExportEndpoint			string	`env:"OTEL_EXPORTER_OTLP_ENDPOINT" envDefault:"127.0.0.1:4317"`
+	UseStdoutTracerExporter		bool	`env:"OTEL_STDOUT_TRACER" envDefault:"false"`
+	UseOtlpCollector			bool	`env:"OTEL_COLLECTOR" envDefault:"true"`
 }
 
 func Load() (cfg *Config, err error) {

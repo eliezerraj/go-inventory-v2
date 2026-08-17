@@ -11,6 +11,10 @@ import (
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/database/connector"
+	//"github.com/eliezerraj/go-core/v3/observability/core_otel"
+
+	//"go.opentelemetry.io/otel/trace"
+	//"go.opentelemetry.io/otel/codes"
 )
 
 type ProductRepository struct {
@@ -47,6 +51,10 @@ func (p *ProductRepository) BeginTx(ctx context.Context, opts pgx.TxOptions) (pg
 func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
 	logger.Info(ctx, "product repository ProductAdd called")
 
+	// Trace
+	//ctx, span := p.TracerProvider.SpanCtx(ctx, "repository.ProductAdd", trace.SpanKindInternal)
+	//defer span.End()
+
 	connectorWriter := p.dbConnector.Writer()
 
 	query := `INSERT INTO product ( sku, 
@@ -62,7 +70,7 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Produ
 
 	var id int
 	if err := rows.Scan(&id); err != nil {
-		logger.ErrorOutCtx("product repository ProductAdd failed", zap.Error(err))
+		logger.Error(ctx,"product repository ProductAdd failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -126,7 +134,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Produ
 
 	row, err := connectorWriter.Exec(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.UpdatedAt, product.ID)
 	if err != nil {
-		logger.ErrorOutCtx("product repository ProductPut failed", zap.Error(err))
+		logger.Error(ctx, "product repository ProductPut failed", zap.Error(err))
 		return 0, err
 	}
 

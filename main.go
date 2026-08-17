@@ -11,18 +11,64 @@ import (
 
 	"github.com/go-inventory-v2/cmd/webserver"
 	"github.com/go-inventory-v2/application/config"
+
 	"github.com/eliezerraj/go-core/v3/logger"
+	"github.com/eliezerraj/go-core/v3/observability/tracing"
+	
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
-// Setup logging configuration and initialize logger
+const RequestIDHeaderName = "x-request-id"
+
+// Setup logging configuration and initialize logger and hook for request ID.
 func setupLogging(cfg *config.Config) {
 	logger.NewLogger(
 		cfg.Log.Level,
 		cfg.Log.Mode,
 	).WithHook(func(ctx context.Context) []zap.Field {
-		fields := []zap.Field{}
-		return fields
+		if id, ok := ctx.Value(RequestIDHeaderName).(string); ok && id != "" {
+			return []zap.Field{zap.String("x-request-id", id)}
+		}
+		return nil
 	})
+}
+
+// Setup observabily
+func setupObservabilty(cfg *config.Config){
+
+	var tracerProvider *tracing.TracerProvider
+	
+	appInfoTrace := tracing.InfoTrace{
+		Name:        cfg.App.Name,
+		Version:     cfg.App.Version,
+		ServiceType: "k8-workload",
+		Env:         cfg.App.Env,
+		Account:     cfg.App.Account,
+	}
+
+	otelEnvTrace := &tracing.EnvTrace{
+		OtelExportEndpoint:      cfg.OtelEnv.OtelExportEndpoint,
+		UseStdoutTracerExporter: cfg.OtelEnv.UseStdoutTracerExporter,
+		UseOtlpCollector:        cfg.OtelEnv.UseOtlpCollector,
+		TimeInterval:            1,
+		TimeAliveIncrementer:    1,
+		TotalHeapSizeUpperBound: 100,
+		ThreadsActiveUpperBound: 10,
+		CpuUsageUpperBound:      100,
+		SampleAppPorts:          []string{},
+		AWSCloudWatchLogGroup:   []string{},
+	} 
+	
+	tracerProvider = tracing.NewTracerProvider(
+		context.Background(),
+		*otelEnvTrace,
+		appInfoTrace,
+	)
+
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTracerProvider(tracerProvider.TracerProvider)
+
 }
 
 // getCmd retrieves the command type from the environment variable or uses the default value.

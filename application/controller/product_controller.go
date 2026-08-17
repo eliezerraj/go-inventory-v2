@@ -23,7 +23,7 @@ func NewProductController(productUseCase usecase.IProductUseCase) *ProductContro
 }
 
 func (p *ProductController) ProductAdd(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
-	logger.InfoOutCtx("product controller ProductAdd called")
+	logger.Info(ctx, "product controller ProductAdd called")
 
 	product := entity.Product{
 		Sku:         req.Sku,
@@ -52,7 +52,7 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 	
 	res, err := p.productUseCase.ProductAdd(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product controller ProductAdd failed", zap.Error(err))
+		logger.Error(ctx, "product controller ProductAdd failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -68,7 +68,7 @@ func (p *ProductController) ProductGet(ctx context.Context, req external.Product
 
 	res, err := p.productUseCase.ProductGet(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product controller ProductGet failed", zap.Error(err))
+		logger.Error(ctx, "product controller ProductGet failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -76,7 +76,7 @@ func (p *ProductController) ProductGet(ctx context.Context, req external.Product
 }
 
 func (p *ProductController) ProductPut(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
-	logger.InfoOutCtx("product controller ProductPut called")
+	logger.Info(ctx, "product controller ProductPut called")
 
 	product := entity.Product{
 		Sku:         req.Sku,
@@ -105,7 +105,7 @@ func (p *ProductController) ProductPut(ctx context.Context, req external.Product
 
 	res, err := p.productUseCase.ProductPut(ctx, product)
 	if err != nil {
-		logger.ErrorOutCtx("product controller ProductPut failed", zap.Error(err))
+		logger.Error(ctx, "product controller ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
