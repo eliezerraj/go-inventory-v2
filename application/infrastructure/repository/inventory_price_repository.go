@@ -21,8 +21,10 @@ type IInventoryPriceRepository interface {
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
 	InventoryAdd(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error)
 	InventoryGet(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error)
+	InventoryPut(ctx context.Context, inventory entity.Inventory) (int64, error)
 	PriceAdd(ctx context.Context, price entity.Price) (*entity.Price, error)
 	PriceGet(ctx context.Context, price entity.Price) (*entity.Price, error)
+	PricePut(ctx context.Context, price entity.Price) (int64, error)
 }
 
 func NewInventoryPriceRepository(dbConnector connector.IDatabaseConnector) IInventoryPriceRepository {
@@ -84,6 +86,28 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 	return &inv, nil
 }
 
+func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, inventory entity.Inventory) (int64, error) {
+	logger.Info(ctx, "inventory price repository InventoryPut called", zap.Any("inventory", inventory))
+
+	connectorWriter := ipr.dbConnector.Writer()
+
+	query := `UPDATE inventory 
+				SET available = $1,
+					pending = $2,
+					sold = $3,
+					updated_at = $4
+				WHERE fk_product_id = $5`
+
+	row, err := connectorWriter.Exec(ctx, query, inventory.Available, inventory.Pending, inventory.Sold, inventory.UpdatedAt, inventory.ProductId)
+	if err != nil {
+		logger.Error(ctx, "failed to update inventory record", zap.Error(err))
+		return 0, err
+	}
+
+	rowsAffected := row.RowsAffected()
+	return rowsAffected, nil
+}
+
 func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.Price) (*entity.Price, error) {
 	logger.Info(ctx, "inventory price repository PriceGet called")
 
@@ -124,4 +148,27 @@ func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, price entity.
 	price.ID = id
 
 	return &price, nil
+}
+
+func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, price entity.Price) (int64, error) {
+	logger.Info(ctx, "inventory price repository PricePut called", zap.Any("price", price))
+
+	connectorWriter := ipr.dbConnector.Writer()
+
+	query := `UPDATE price 
+				SET amount = $1,
+					currency = $2,
+					started_at = $3,
+					ended_at = $4,
+					updated_at = $5
+				WHERE fk_product_id = $6`
+
+	row, err := connectorWriter.Exec(ctx, query, price.Amount, price.Currency, price.StartedAt, price.EndedAt, price.UpdatedAt, price.ProductId)
+	if err != nil {
+		logger.Error(ctx, "failed to update price record", zap.Error(err))
+		return 0, err
+	}
+
+	rowsAffected := row.RowsAffected()
+	return rowsAffected, nil
 }

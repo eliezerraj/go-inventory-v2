@@ -74,11 +74,14 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 		return nil, err
 	}
 
+	// Repository initialization
 	productRepository := repository.NewProductRepository(dbConnector)
 	inventoryPriceRepository := repository.NewInventoryPriceRepository(dbConnector)
 	
+	// UseCase initialization
 	productUsecase := usecase.NewProductUseCase(productRepository, inventoryPriceRepository)
 
+	// Controller initialization
 	productController := controller.NewProductController(productUsecase)
 
 	return &Application{

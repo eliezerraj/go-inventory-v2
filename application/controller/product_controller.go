@@ -79,7 +79,28 @@ func (p *ProductController) ProductPut(ctx context.Context, req external.Product
 	logger.InfoOutCtx("product controller ProductPut called")
 
 	product := entity.Product{
+		Sku:         req.Sku,
 		Name:        req.Name,
+		Status:      req.Status,
+		Type:        req.Type,
+		LeadTime:    req.LeadTime,
+	}
+
+	if req.Price != nil {
+		price := entity.Price{
+			Currency:    req.Price.Currency,
+			Amount:      req.Price.Amount,
+		}
+		product.Price = &price
+	}
+
+	if req.Inventory != nil {
+		inventory := entity.Inventory{
+			Available:   req.Inventory.Available,
+			Pending:     req.Inventory.Pending,
+			Sold:        req.Inventory.Sold,
+		}
+		product.Inventory = &inventory
 	}
 
 	res, err := p.productUseCase.ProductPut(ctx, product)

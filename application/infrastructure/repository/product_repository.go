@@ -21,7 +21,7 @@ type IProductRepository interface {
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
 	ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error)
 	ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error)
-	ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error)
+	ProductPut(ctx context.Context, product entity.Product) (int64, error)
 }
 
 func NewProductRepository(dbConnector connector.IDatabaseConnector) IProductRepository {
@@ -80,7 +80,11 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 					 sku, 
 					 name, 
 					 status, 
-					 type
+					 type,
+					 lead_time,
+					 expires_at,
+					 created_at,
+					 updated_at
 	 		  FROM product WHERE sku = $1`
 
 	rows, err := connectorReader.Query(ctx, query, product.Sku)
@@ -91,7 +95,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	defer rows.Close()
 
 	if rows.Next() {
-		err = rows.Scan(&product.ID, &product.Sku, &product.Name, &product.Status, &product.Type)
+		err = rows.Scan(&product.ID, &product.Sku, &product.Name, &product.Status, &product.Type, &product.LeadTime, &product.ExpiresAt, &product.CreatedAt, &product.UpdatedAt)
 		if err != nil {
 			logger.Error(ctx, "failed to scan result", zap.Error(err))
 			return nil, err
@@ -103,8 +107,33 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	return &product, nil
 }
 
-func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
+func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Product) (int64, error) {
 	logger.Info(ctx, "product repository ProductPut called")
 
-	return &product, nil
+	connectorWriter := p.dbConnector.Writer()
+
+	logger.Info(ctx, "product repository ProductPut called", zap.Any("product", product))
+
+	query := `UPDATE product 
+				SET sku = $1,
+					type = $2,
+					name = $3,
+					status = $4,
+					lead_time = $5,
+					expires_at = $6,
+					updated_at = $7
+				WHERE id = $8`
+
+	row, err := connectorWriter.Exec(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.UpdatedAt, product.ID)
+	if err != nil {
+		logger.ErrorOutCtx("product repository ProductPut failed", zap.Error(err))
+		return 0, err
+	}
+
+	if row.RowsAffected() == 0 {
+		logger.Warn(ctx, "product repository ProductPut: no rows affected, product not found", zap.Int("product_id", product.ID))
+		return 0, nil
+	}
+
+	return row.RowsAffected(), nil
 }

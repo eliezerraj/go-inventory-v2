@@ -29,7 +29,7 @@ func NewApplicationAdapter(cfg *config.Config, application *application.Applicat
 	}
 }
 
-// ProductGet 
+// Adapter methods for ProductController 
 func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 	logger.InfoOutCtx("ProductGet called")
 
@@ -119,4 +119,59 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 	}
 
 	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
-}	
+}
+
+func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
+	logger.InfoOutCtx("ProductPut called")
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
+	defer cancel()
+
+	logger.Debug(
+		ctxWithTimeout,
+		a.cfg.App.Name,
+		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
+		zap.ByteString("query", ctxFiber.Request().URI().QueryString()),
+		zap.ByteString("body", ctxFiber.Body()),
+	)
+
+	product := external.ProductRequest{}
+	if err := ctxFiber.BodyParser(&product); err != nil {
+		logger.Error(ctxWithTimeout, "failed to parse request body", zap.Error(err))
+		errorResponse := external.NewResponseError(ctxWithTimeout,
+			fiber.StatusBadRequest,
+			fiber.ErrBadRequest,
+			fiber.ErrBadRequest.Message,
+			"failed to parse request body",
+			err.Error(),
+			external.BUSSINESS_ERROR)
+		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
+	}
+
+	// Parameter "sku" can be passed either as a path parameter or as a query parameter. If it's not provided in the path, we check the query parameters.
+	sku := ctxFiber.Params("sku")
+	if sku == "" {
+		sku = ctxFiber.Query("sku")
+	}
+	product.Sku = sku
+
+	res, err := a.application.ProductController.ProductPut(ctxWithTimeout, product)
+	if err != nil {
+		logger.Error(ctxWithTimeout, "failed to update product inventory", zap.Error(err))
+		errorResponse := external.NewResponseError(ctxWithTimeout,
+			fiber.StatusNotFound,
+			fiber.ErrNotFound,
+			fiber.ErrNotFound.Message,
+			"failed to update product inventory",
+			err.Error(),
+			external.BUSSINESS_ERROR)
+		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
+	}
+
+	resp := external.ProductResponse{
+		Response: "Product inventory updated successfully",
+		Product: res,
+	}
+
+	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
+}

@@ -39,7 +39,7 @@ func NewWebServer(cfg *config.Config) *WebServer {
 
 func (s *WebServer) Run() {
 	logger.InfoOutCtx("starting fiber server on port: " + s.cfg.HTTP.Port)
-	if err := s.fiberServer.App.Listen(":" + s.cfg.HTTP.Port); err != nil {
+	if err := s.fiberServer.FiberApp.Listen(":" + s.cfg.HTTP.Port); err != nil {
 		logger.FatalOutCtx("failed to start HTTP server", zap.Error(err))
 	}
 }
