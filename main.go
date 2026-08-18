@@ -5,6 +5,8 @@ import (
 	"os/signal"
 	"syscall"
 	"context"
+  	"net/http"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.uber.org/zap"
 	stdLog "log"
@@ -14,7 +16,8 @@ import (
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/observability/tracing"
-	
+	coreMetricLib "github.com/eliezerraj/go-core/v3/observability/metric"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -34,8 +37,8 @@ func setupLogging(cfg *config.Config) {
 	})
 }
 
-// Setup observabily
-func setupObservabilty(cfg *config.Config){
+// Setup observability
+func setupObservability(cfg *config.Config){
 
 	var tracerProvider *tracing.TracerProvider
 	
@@ -71,6 +74,35 @@ func setupObservabilty(cfg *config.Config){
 
 }
 
+// Setup metrics
+func setupMetrics(cfg *config.Config) {
+	ctx := context.Background()
+
+	mp, err := coreMetricLib.NewMeterProvider(ctx, coreMetricLib.InfoMetric{
+        Name:    cfg.App.Name,
+        Version: cfg.App.Version,
+        Env:     cfg.App.Env,
+        Account: cfg.App.Account,
+    })
+	if err != nil {
+		stdLog.Fatalf("failed to initialize meter provider: %+v", err)
+	}
+
+	otel.SetMeterProvider(mp)
+
+	// Start a separate HTTP server for Prometheus metrics
+	mux := http.NewServeMux()
+    mux.Handle("/metrics", promhttp.Handler())
+
+    go func() {
+		logger.InfoOutCtx("starting metrics server", zap.String("port", cfg.OtelEnv.OtelMetricsPort))
+        if err := http.ListenAndServe(":"+cfg.OtelEnv.OtelMetricsPort, mux); err != nil {
+            logger.ErrorOutCtx("metrics server error", zap.Error(err))
+        }
+    }()
+}
+
+
 // getCmd retrieves the command type from the environment variable or uses the default value.
 func getCmd(env string, val string) string {
 	cmd := os.Getenv(env)
@@ -88,9 +120,6 @@ func main() {
 		return
 	}
 
-	// Setup observability
-	setupObservabilty(cfg)
-
 	// Setup logging
 	setupLogging(cfg)
 	defer logger.Close()
@@ -98,7 +127,12 @@ func main() {
 	logger.InfoOutCtx("starting application", 
 		zap.String("app_name", cfg.App.Name), 
 		zap.String("version", cfg.App.Version))
+
 	logger.InfoOutCtx("application configuration", zap.Any("config", cfg))
+
+	// Setup observability and metrics
+	setupObservability(cfg)
+	setupMetrics(cfg)
 
 	// Setup signal handling for graceful shutdown
 	stopSignal := make(chan os.Signal, 1)

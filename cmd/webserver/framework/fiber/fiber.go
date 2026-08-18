@@ -102,8 +102,7 @@ func (s *FiberServer) SetupRoutes(application *application.Application) {
 	appRoutes.Get("/info", adapters.metadataAdp.InfoGet)
 	appRoutes.Get("/echo-header", adapters.metadataAdp.HeadersGet)
 	appRoutes.Get("/echo-context", adapters.metadataAdp.ContextGet)
-	appRoutes.Get("/product/:sku", adapters.applicationAdp.ProductGet)
+	appRoutes.Get("/product/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.ProductGet))
 	appRoutes.Post("/product", adapters.applicationAdp.ProductAdd)
 	appRoutes.Put("/product/:sku", adapters.applicationAdp.ProductPut)
-
 }

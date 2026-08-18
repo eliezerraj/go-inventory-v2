@@ -2,9 +2,13 @@ package middleware
 
 import (
 	"context"
-
+	"time"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+
+	"go.opentelemetry.io/otel"
+    "go.opentelemetry.io/otel/attribute"
+    "go.opentelemetry.io/otel/metric"
 )
 
 const RequestIDHeaderName = "x-request-id"
@@ -70,5 +74,33 @@ func RequestIDMiddleware() fiber.Handler {
 		c.SetUserContext(ctx)
 
 		return c.Next()
+	}
+}
+
+// MetricsMiddleware is a middleware function that can be used to collect metrics for each incoming request. It is currently a placeholder and does not implement any metrics collection logic.
+func MetricsMiddleware(next fiber.Handler) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+        start := time.Now()
+
+        err := next(c)
+
+        duration := time.Since(start).Seconds()
+
+        meter := otel.Meter("go-inventory-v2.http")
+        counter, _ := meter.Int64Counter("http_custom_requests_total")
+        histogram, _ := meter.Float64Histogram("http_custom_request_duration_seconds")
+
+        counter.Add(c.UserContext(), 1, metric.WithAttributes(
+            attribute.String("method", c.Method()),
+            attribute.String("path", c.Path()),
+            attribute.Int("status_code", c.Response().StatusCode()),
+        ))
+
+        histogram.Record(c.UserContext(), duration, metric.WithAttributes(
+            attribute.String("method", c.Method()),
+            attribute.String("path", c.Path()),
+        ))
+
+        return err
 	}
 }

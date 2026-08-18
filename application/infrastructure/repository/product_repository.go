@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"context"
 	"errors"
 	"go.uber.org/zap"
@@ -13,7 +14,10 @@ import (
 	"github.com/eliezerraj/go-core/v3/database/connector"
 
 	"go.opentelemetry.io/otel"
+
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type ProductRepository struct {
@@ -91,6 +95,15 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
     ctx, span := tracer.Start(ctx, "ProductRepository.ProductGet")
     defer span.End()
 
+    meter := otel.Meter("go-inventory-v2.repository")
+    counter, _ := meter.Int64Counter("db_custom_product_get_requests_total")
+    histogram, _ := meter.Float64Histogram("db_custom_product_get_duration_seconds")
+    start := time.Now()
+
+    counter.Add(ctx, 1, metric.WithAttributes(
+        attribute.String("operation", "ProductGet"),
+    ))
+
 	logger.Info(ctx, "product repository ProductGet called")
 
 	var err error
@@ -101,6 +114,9 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "product repository ProductGet failed", zap.Error(err))
 		}
+        histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+            attribute.String("operation", "ProductGet"),
+        ))
 	}()
 
 	// Get a reader connection from the database connector
@@ -133,6 +149,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 		err = errors.New("product not found")
 		return nil, err
 	}
+
 	return &product, nil
 }
 
@@ -154,8 +171,6 @@ func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Produ
 	}()
 
 	connectorWriter := p.dbConnector.Writer()
-
-	logger.Info(ctx, "product repository ProductPut called", zap.Any("product", product))
 
 	query := `UPDATE product 
 				SET sku = $1,
