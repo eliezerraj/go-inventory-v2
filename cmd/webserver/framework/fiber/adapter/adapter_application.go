@@ -13,6 +13,8 @@ import (
 	"github.com/eliezerraj/go-core/v3/http/utils"
 
 	"github.com/gofiber/fiber/v2"
+
+	"go.opentelemetry.io/otel"
 )
 
 type ApplicationAdapter struct {
@@ -33,8 +35,12 @@ func NewApplicationAdapter(cfg *config.Config, application *application.Applicat
 func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
-	
-	logger.Info(ctxWithTimeout, "ProductGet called")
+
+	tracer := otel.Tracer("product.adapter")
+	ctx, span := tracer.Start(ctxWithTimeout, "ApplicationAdapter.ProductGet")
+	defer span.End()
+
+	logger.Info(ctx, "ProductGet called")
 
 	logger.Debug(
 		ctxWithTimeout,

@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
+
 	"github.com/eliezerraj/go-core/v3/logger"
 	"go.uber.org/zap"
 	"github.com/go-inventory-v2/application/domain/usecase"
@@ -23,6 +25,10 @@ func NewProductController(productUseCase usecase.IProductUseCase) *ProductContro
 }
 
 func (p *ProductController) ProductAdd(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
+	tracer := otel.Tracer("product.controller")
+	ctx, span := tracer.Start(ctx, "ProductController.ProductAdd")
+	defer span.End()
+
 	logger.Info(ctx, "product controller ProductAdd called")
 
 	product := entity.Product{
@@ -60,6 +66,10 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 }
 
 func (p *ProductController) ProductGet(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
+	tracer := otel.Tracer("product.controller")
+	ctx, span := tracer.Start(ctx, "ProductController.ProductGet")
+	defer span.End()
+
 	logger.Info(ctx, "product controller ProductGet called", zap.String("sku", req.Sku))
 
 	product := entity.Product{
@@ -76,6 +86,10 @@ func (p *ProductController) ProductGet(ctx context.Context, req external.Product
 }
 
 func (p *ProductController) ProductPut(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
+	tracer := otel.Tracer("product.controller")
+	ctx, span := tracer.Start(ctx, "ProductController.ProductPut")
+	defer span.End()
+	
 	logger.Info(ctx, "product controller ProductPut called")
 
 	product := entity.Product{

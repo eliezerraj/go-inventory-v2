@@ -13,6 +13,8 @@ import (
 	"github.com/go-inventory-v2/application/infrastructure/repository"
 
 	"github.com/jackc/pgx/v5"
+
+	"go.opentelemetry.io/otel"
 )
 
 type ProductUsecase struct {
@@ -50,6 +52,10 @@ func (p *ProductUsecase) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.T
 }
 
 func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	tracer := otel.Tracer("inventory.repository")
+	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductAdd")
+	defer span.End()
+
 	logger.Info(ctx, "product usecase ProductAdd called")
 
 	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
@@ -118,6 +124,10 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 }
 
 func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	tracer := otel.Tracer("inventory.repository")
+	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductGet")
+	defer span.End()
+
 	logger.Info(ctx, "product usecase ProductGet called")
 
 	res, err := p.productRepository.ProductGet(ctx, product)
@@ -142,6 +152,10 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 }
 
 func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	tracer := otel.Tracer("inventory.repository")
+	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductPut")
+	defer span.End()
+
 	logger.Info(ctx, "product usecase ProductPut called")
 
 	// Start tx

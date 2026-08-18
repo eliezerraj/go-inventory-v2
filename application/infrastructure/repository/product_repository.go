@@ -11,10 +11,9 @@ import (
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/database/connector"
-	//"github.com/eliezerraj/go-core/v3/observability/core_otel"
 
-	//"go.opentelemetry.io/otel/trace"
-	//"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type ProductRepository struct {
@@ -49,11 +48,21 @@ func (p *ProductRepository) BeginTx(ctx context.Context, opts pgx.TxOptions) (pg
 }
 
 func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	tracer := otel.Tracer("inventory.repository")
+	ctx, span := tracer.Start(ctx, "ProductRepository.ProductAdd")
+	defer span.End()
+	
 	logger.Info(ctx, "product repository ProductAdd called")
 
-	// Trace
-	//ctx, span := p.TracerProvider.SpanCtx(ctx, "repository.ProductAdd", trace.SpanKindInternal)
-	//defer span.End()
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err) 
+			span.SetStatus(codes.Error, err.Error())
+			logger.Error(ctx, "product repository ProductAdd failed", zap.Error(err))
+		}
+	}()
 
 	connectorWriter := p.dbConnector.Writer()
 
@@ -70,7 +79,6 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Produ
 
 	var id int
 	if err := rows.Scan(&id); err != nil {
-		logger.Error(ctx,"product repository ProductAdd failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -79,7 +87,21 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Produ
 }
 
 func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	tracer := otel.Tracer("inventory.repository")
+    ctx, span := tracer.Start(ctx, "ProductRepository.ProductGet")
+    defer span.End()
+
 	logger.Info(ctx, "product repository ProductGet called")
+
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err) 
+			span.SetStatus(codes.Error, err.Error())
+			logger.Error(ctx, "product repository ProductGet failed", zap.Error(err))
+		}
+	}()
 
 	// Get a reader connection from the database connector
 	connectorReader := p.dbConnector.Reader()
@@ -97,7 +119,6 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 
 	rows, err := connectorReader.Query(ctx, query, product.Sku)
 	if err != nil {
-		logger.Error(ctx,"failed to execute query", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -105,18 +126,32 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	if rows.Next() {
 		err = rows.Scan(&product.ID, &product.Sku, &product.Name, &product.Status, &product.Type, &product.LeadTime, &product.ExpiresAt, &product.CreatedAt, &product.UpdatedAt)
 		if err != nil {
-			logger.Error(ctx, "failed to scan result", zap.Error(err))
 			return nil, err
 		}
 	} else {
 		logger.Warn(ctx, "not found", zap.String("sku", product.Sku))
-		return nil, errors.New("product not found")
+		err = errors.New("product not found")
+		return nil, err
 	}
 	return &product, nil
 }
 
 func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Product) (int64, error) {
+	tracer := otel.Tracer("inventory.repository")
+    ctx, span := tracer.Start(ctx, "ProductRepository.ProductPut")
+    defer span.End()
+
 	logger.Info(ctx, "product repository ProductPut called")
+
+	var err error
+
+	defer func() {
+		if err != nil {
+			span.RecordError(err) 
+			span.SetStatus(codes.Error, err.Error())
+			logger.Error(ctx, "product repository ProductPut failed", zap.Error(err))
+		}
+	}()
 
 	connectorWriter := p.dbConnector.Writer()
 
@@ -134,7 +169,6 @@ func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Produ
 
 	row, err := connectorWriter.Exec(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.UpdatedAt, product.ID)
 	if err != nil {
-		logger.Error(ctx, "product repository ProductPut failed", zap.Error(err))
 		return 0, err
 	}
 

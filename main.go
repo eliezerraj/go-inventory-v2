@@ -87,7 +87,11 @@ func main() {
 		stdLog.Fatalf("load environment configurations error: %+v", err)
 		return
 	}
-	
+
+	// Setup observability
+	setupObservabilty(cfg)
+
+	// Setup logging
 	setupLogging(cfg)
 	defer logger.Close()
 
@@ -100,6 +104,7 @@ func main() {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 
+	// Determine the command type and execute the corresponding process
 	cmd := getCmd("COMMAND_TYPE", "webserver")
 
 	switch cmd {
