@@ -102,7 +102,6 @@ func setupMetrics(cfg *config.Config) {
     }()
 }
 
-
 // getCmd retrieves the command type from the environment variable or uses the default value.
 func getCmd(env string, val string) string {
 	cmd := os.Getenv(env)

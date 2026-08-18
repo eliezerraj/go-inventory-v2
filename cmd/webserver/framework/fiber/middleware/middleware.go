@@ -3,6 +3,8 @@ package middleware
 import (
 	"context"
 	"time"
+	"strings"
+	
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -81,10 +83,15 @@ func RequestIDMiddleware() fiber.Handler {
 func MetricsMiddleware(next fiber.Handler) fiber.Handler {
 	return func(c *fiber.Ctx) error {
         start := time.Now()
-
         err := next(c)
 
-        duration := time.Since(start).Seconds()
+		routePath := c.Route().Path
+        if routePath == "" {
+            routePath = c.Path()
+            if i := strings.Index(routePath, "?"); i >= 0 {
+                routePath = routePath[:i]
+            }
+        }
 
         meter := otel.Meter("go-inventory-v2.http")
         counter, _ := meter.Int64Counter("http_custom_requests_total")
@@ -92,11 +99,11 @@ func MetricsMiddleware(next fiber.Handler) fiber.Handler {
 
         counter.Add(c.UserContext(), 1, metric.WithAttributes(
             attribute.String("method", c.Method()),
-            attribute.String("path", c.Path()),
+            attribute.String("path", routePath),
             attribute.Int("status_code", c.Response().StatusCode()),
         ))
 
-        histogram.Record(c.UserContext(), duration, metric.WithAttributes(
+        histogram.Record(c.UserContext(), time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("method", c.Method()),
             attribute.String("path", c.Path()),
         ))

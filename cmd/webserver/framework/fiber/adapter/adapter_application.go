@@ -124,7 +124,7 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 		Product: res,
 	}
 
-	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
+	return ctxFiber.Status(fiber.StatusCreated).JSON(resp)
 }
 
 func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
