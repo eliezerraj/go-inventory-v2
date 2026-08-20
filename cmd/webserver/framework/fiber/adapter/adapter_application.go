@@ -42,6 +42,10 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 
 	logger.Info(ctx, "ProductGet called")
 
+	// Debugging: Log the incoming traceparent header for tracing purposes
+	traceparent := ctxFiber.Get("traceparent")
+	logger.Debug(ctx, " ***** Incoming traceparent *****", zap.String("traceparent", traceparent))
+
 	logger.Debug(
 		ctxWithTimeout,
 		a.cfg.App.Name,
