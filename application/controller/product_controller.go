@@ -73,6 +73,7 @@ func (p *ProductController) ProductGet(ctx context.Context, req external.Product
 	logger.Info(ctx, "product controller ProductGet called", zap.String("sku", req.Sku))
 
 	product := entity.Product{
+		ID:  req.ID,
 		Sku: req.Sku,
 	}
 

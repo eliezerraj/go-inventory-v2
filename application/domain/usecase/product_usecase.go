@@ -51,12 +51,12 @@ func (p *ProductUsecase) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.T
 	return tx, nil
 }
 
-func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
+func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
+	logger.Info(ctx, "product usecase ProductAdd called")
+
 	tracer := otel.Tracer("inventory.repository")
 	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductAdd")
 	defer span.End()
-
-	logger.Info(ctx, "product usecase ProductAdd called")
 
 	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
 	if err != nil {
@@ -66,7 +66,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 
 	defer func() {
 		if err != nil {
-			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr != pgx.ErrTxClosed {
 				logger.Error(ctx, "product usecase ProductAdd failed to rollback transaction", zap.Error(rollbackErr))
 			}
 		} else {
@@ -82,7 +82,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 	createAt := time.Now().UTC()
 	product.CreatedAt = &createAt 
 
-	res, err := p.productRepository.ProductAdd(ctx, product)
+	res_product, err = p.productRepository.ProductAdd(ctx, tx, product)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductAdd failed", zap.Error(err))
 		return nil, err
@@ -94,41 +94,41 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 	}
 
 	if product.Inventory != nil {
-		product.Inventory.ProductId = res.ID
+		product.Inventory.ProductId = res_product.ID
 		product.Inventory.CreatedAt = &createAt
-		inv, err := p.inventoryPriceRepository.InventoryAdd(ctx, *product.Inventory)
+		inv, err := p.inventoryPriceRepository.InventoryAdd(ctx, tx, *product.Inventory)
 		if err != nil {
 			logger.Error(ctx, "product usecase ProductAdd failed to add inventory", zap.Error(err))
 			return nil, err
 		}
-		res.Inventory = inv
+		res_product.Inventory = inv
 	}
 
 	if product.Price != nil {
-		product.Price.ProductId = res.ID
+		product.Price.ProductId = res_product.ID
 		product.Price.CreatedAt = &createAt
 		product.Price.StartedAt = &createAt
 		product.Price.EndedAt = &expiresAt
 
-		price, err := p.inventoryPriceRepository.PriceAdd(ctx, *product.Price)
+		price, err := p.inventoryPriceRepository.PriceAdd(ctx, tx, *product.Price)
 		if err != nil {
 			logger.Error(ctx, "product usecase ProductAdd failed to add price", zap.Error(err))
 			return nil, err
 		}
 
-		res.Price = price
+		res_product.Price = price
 	}
 
 	logger.Info(ctx, "product usecase ProductAdd completed SUCCESSFULLY")
-	return res, nil
+	return res_product, nil
 }
 
 func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error) {
+	logger.Info(ctx, "product usecase ProductGet called")
+
 	tracer := otel.Tracer("inventory.repository")
 	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductGet")
 	defer span.End()
-
-	logger.Info(ctx, "product usecase ProductGet called")
 
 	res, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
@@ -151,12 +151,12 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 	return res, nil
 }
 
-func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error) {
+func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
+	logger.Info(ctx, "product usecase ProductPut called")
+
 	tracer := otel.Tracer("inventory.repository")
 	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductPut")
 	defer span.End()
-
-	logger.Info(ctx, "product usecase ProductPut called")
 
 	// Start tx
 	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
@@ -165,6 +165,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 		return nil, err
 	}
 
+	// Defer rollback or commit based on the outcome of the operation
 	defer func() {
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
@@ -182,7 +183,6 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	res_prod, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
-		tx.Rollback(ctx)
 		return nil, err
 	}
 
@@ -191,7 +191,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	product.UpdatedAt = &updatedAt
 
 	// Update product
-	upd_prod, err := p.productRepository.ProductPut(ctx, product)
+	upd_prod, err := p.productRepository.ProductPut(ctx, tx, product)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
@@ -220,7 +220,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 		product.Price.EndedAt = res_price.EndedAt
 	}
 
-	upd_price, err := p.inventoryPriceRepository.PricePut(ctx, *product.Price)
+	upd_price, err := p.inventoryPriceRepository.PricePut(ctx, tx, *product.Price)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
@@ -234,7 +234,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Update inventory
 	product.Inventory.ProductId = product.ID
 	product.Inventory.UpdatedAt = &updatedAt
-	upd_inv, err := p.inventoryPriceRepository.InventoryPut(ctx, *product.Inventory)
+	upd_inv, err := p.inventoryPriceRepository.InventoryPut(ctx, tx, *product.Inventory)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err

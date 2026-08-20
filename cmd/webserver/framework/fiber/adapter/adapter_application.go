@@ -2,7 +2,7 @@ package adapter
 
 import (
 	"context"
-
+	"strconv"
 	"go.uber.org/zap"
 
 	"github.com/go-inventory-v2/application/config"
@@ -57,6 +57,9 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 
 	product := external.ProductRequest{
 		Sku: sku,
+	}
+	if id, err := strconv.Atoi(sku); err == nil {
+		product.ID = id
 	}
 
 	res, err := a.application.ProductController.ProductGet(ctxWithTimeout, product)
