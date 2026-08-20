@@ -82,6 +82,7 @@ func setupMiddleware(cfg *config.Config, fiberApp *fiber.App) {
 	
 	fiberApp.Use(middleware.HeaderMiddleware())
 	fiberApp.Use(middleware.RequestIDMiddleware())
+	fiberApp.Use(middleware.TraceExtractionMiddleware())
 
 	fiberApp.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,

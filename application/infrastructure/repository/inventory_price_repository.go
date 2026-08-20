@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"time"
+
 	"go.uber.org/zap"
 
 	"github.com/jackc/pgx/v5"
@@ -13,6 +15,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type InventoryPriceRepository struct {
@@ -21,12 +25,12 @@ type InventoryPriceRepository struct {
 
 type IInventoryPriceRepository interface {
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
-	InventoryAdd(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error)
+	InventoryAdd(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (*entity.Inventory, error)
 	InventoryGet(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error)
-	InventoryPut(ctx context.Context, inventory entity.Inventory) (int64, error)
-	PriceAdd(ctx context.Context, price entity.Price) (*entity.Price, error)
+	InventoryPut(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (int64, error)
+	PriceAdd(ctx context.Context, tx pgx.Tx, price entity.Price) (*entity.Price, error)
 	PriceGet(ctx context.Context, price entity.Price) (*entity.Price, error)
-	PricePut(ctx context.Context, price entity.Price) (int64, error)
+	PricePut(ctx context.Context, tx pgx.Tx, price entity.Price) (int64, error)
 }
 
 func NewInventoryPriceRepository(dbConnector connector.IDatabaseConnector) IInventoryPriceRepository {
@@ -47,25 +51,36 @@ func (ipr *InventoryPriceRepository) BeginTx(ctx context.Context, opts pgx.TxOpt
 	return tx, nil
 }
 
-func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error) {
+func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (res_inventory *entity.Inventory, err error) {
+	logger.Info(ctx, "inventory price repository InventoryAdd called")
+
+	// Start tracing and metrics
 	tracer := otel.Tracer("inventory_price.repository")
 	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryAdd")
 	defer span.End()
 
-	logger.Info(ctx, "inventory price repository InventoryAdd called")
+	meter := otel.Meter("go-inventory-v2.repository")
+    counter, _ := meter.Int64Counter("db_custom_inventory_add_requests_total")
+    histogram, _ := meter.Float64Histogram("db_custom_inventory_add_duration_seconds")
+    start := time.Now()
 
-	var err error
-
+    counter.Add(ctx, 1, metric.WithAttributes(
+        attribute.String("operation", "InventoryAdd"),
+    ))
+	
+	// Defer function to handle error logging and metrics recording
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "inventory price repository InventoryAdd failed", zap.Error(err))
 		}
+        histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+            attribute.String("operation", "InventoryAdd"),
+        ))
 	}()
 
-	connectorWriter := ipr.dbConnector.Writer()
-
+	// Insert inventory record into the database
 	query := `INSERT INTO inventory ( fk_product_id, 
 										available,
 										pending,
@@ -74,7 +89,7 @@ func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, inventory
 				VALUES($1, $2, $3, $4, $5) RETURNING id`
 
 	var id int
-	if err := connectorWriter.QueryRow(ctx, query, inventory.ProductId, inventory.Available, inventory.Pending, inventory.Sold, inventory.CreatedAt).Scan(&id); err != nil {
+	if err := tx.QueryRow(ctx, query, inventory.ProductId, inventory.Available, inventory.Pending, inventory.Sold, inventory.CreatedAt).Scan(&id); err != nil {
 		return nil, err
 	}
 	inventory.ID = id
@@ -82,21 +97,31 @@ func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, inventory
 	return &inventory, nil
 }
 
-func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error) {
+func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory entity.Inventory) (res_inventory *entity.Inventory, err error) {
+	logger.Info(ctx, "inventory price repository InventoryGet called")
+
 	tracer := otel.Tracer("inventory_price.repository")
 	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryGet")
 	defer span.End()
 
-	logger.Info(ctx, "inventory price repository InventoryGet called")
-	
-	var err error
+	meter := otel.Meter("go-inventory-v2.repository")
+    counter, _ := meter.Int64Counter("db_custom_inventory_get_requests_total")
+    histogram, _ := meter.Float64Histogram("db_custom_inventory_get_duration_seconds")
+    start := time.Now()
 
+    counter.Add(ctx, 1, metric.WithAttributes(
+        attribute.String("operation", "InventoryGet"),
+    ))
+	
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "inventory price repository InventoryGet failed", zap.Error(err))
 		}
+        histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+            attribute.String("operation", "InventoryGet"),
+        ))
 	}()
 
 	connectorReader := ipr.dbConnector.Reader()
@@ -115,25 +140,36 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 	return &inv, nil
 }
 
-func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, inventory entity.Inventory) (int64, error) {
+func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (rowsAffected int64, err error) {
+	logger.Info(ctx, "inventory price repository InventoryPut called", zap.Any("inventory", inventory))
+
+	// Start tracing and metrics
 	tracer := otel.Tracer("inventory_price.repository")
 	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryPut")
 	defer span.End()
 
-	logger.Info(ctx, "inventory price repository InventoryPut called", zap.Any("inventory", inventory))
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_inventory_put_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_inventory_put_duration_seconds")
+	start := time.Now()
 
-	connectorWriter := ipr.dbConnector.Writer()
-	
-	var err error
+	counter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", "InventoryPut"),
+	))
 
+	// Defer function to handle error logging and metrics recording
 	defer func() {
 		if err != nil {
-			span.RecordError(err) 
+			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "inventory price repository InventoryPut failed", zap.Error(err))
 		}
+		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("operation", "InventoryPut"),
+		))
 	}()
 
+	// Update inventory record in the database
 	query := `UPDATE inventory 
 				SET available = $1,
 					pending = $2,
@@ -141,31 +177,46 @@ func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, inventory
 					updated_at = $4
 				WHERE fk_product_id = $5`
 
-	row, err := connectorWriter.Exec(ctx, query, inventory.Available, inventory.Pending, inventory.Sold, inventory.UpdatedAt, inventory.ProductId)
+	row, err := tx.Exec(ctx, query, inventory.Available, inventory.Pending, inventory.Sold, inventory.UpdatedAt, inventory.ProductId)
 	if err != nil {
 		return 0, err
 	}
 
-	rowsAffected := row.RowsAffected()
+	rowsAffected = row.RowsAffected()
 	return rowsAffected, nil
 }
 
-func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.Price) (*entity.Price, error) {
+func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.Price) (res_price *entity.Price, err error) {
+	logger.Info(ctx, "inventory price repository PriceGet called")
+
+	// Start tracing and metrics
 	tracer := otel.Tracer("inventory_price.repository")
 	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.PriceGet")
 	defer span.End()
 
-	logger.Info(ctx, "inventory price repository PriceGet called")
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_price_get_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_price_get_duration_seconds")
+	start := time.Now()
 
-	var err error
+	counter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", "PriceGet"),
+	))
 
+	// Defer function to handle error logging and metrics recording
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "inventory price repository PriceGet failed", zap.Error(err))
+			logger.Error(ctx, "inventory price repository PriceGet failed", zap.Error(err))
 		}
+		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("operation", "PriceGet"),
+		))
 	}()
+
+	// Query the database for the price record
 	connectorReader := ipr.dbConnector.Reader()
 
 	query := `SELECT id, fk_product_id, amount, currency, started_at, ended_at, created_at, updated_at 
@@ -182,25 +233,36 @@ func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.
 	return &pr, nil
 }
 
-func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, price entity.Price) (*entity.Price, error) {
+func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, tx pgx.Tx, price entity.Price) (res_price *entity.Price, err error) {
+	logger.Info(ctx, "inventory price repository PriceAdd called")
+
+	// Start tracing and metrics
 	tracer := otel.Tracer("inventory_price.repository")
 	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.PriceAdd")
 	defer span.End()
-	
-	logger.Info(ctx, "inventory price repository PriceAdd called")
 
-	var err error
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_price_add_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_price_add_duration_seconds")
+	start := time.Now()
 
+	counter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", "PriceAdd"),
+	))
+
+	// Defer function to handle error logging and metrics recording
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "inventory price repository PriceAdd failed", zap.Error(err))
 		}
+		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("operation", "PriceAdd"),
+		))
 	}()
 
-	connectorWriter := ipr.dbConnector.Writer()
-
+	// Insert price record into the database
 	query := `INSERT INTO price ( fk_product_id,
 									amount,
 									currency,
@@ -210,22 +272,29 @@ func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, price entity.
 				VALUES($1, $2, $3, $4, $5, $6) RETURNING id`
 
 	var id int
-	if err := connectorWriter.QueryRow(ctx, query, price.ProductId, price.Amount, price.Currency, price.StartedAt, price.EndedAt, price.CreatedAt).Scan(&id); err != nil {
+	if err := tx.QueryRow(ctx, query, price.ProductId, price.Amount, price.Currency, price.StartedAt, price.EndedAt, price.CreatedAt).Scan(&id); err != nil {
 		return nil, err
 	}
-	price.ID = id
 
+	price.ID = id
 	return &price, nil
 }
 
-func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, price entity.Price) (int64, error) {
+func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, tx pgx.Tx, price entity.Price) (rowsAffected int64, err error) {
 	tracer := otel.Tracer("inventory_price.repository")
 	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.PricePut")
 	defer span.End()
 
-	logger.Info(ctx, "inventory price repository PricePut called", zap.Any("price", price))
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_price_put_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_price_put_duration_seconds")
+	start := time.Now()
 
-	var err error
+	counter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", "PricePut"),
+	))
+
+	logger.Info(ctx, "inventory price repository PricePut called", zap.Any("price", price))
 
 	defer func() {
 		if err != nil {
@@ -233,9 +302,10 @@ func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, price entity.
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "inventory price repository PricePut failed", zap.Error(err))
 		}
+		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+			attribute.String("operation", "PricePut"),
+		))
 	}()
-
-	connectorWriter := ipr.dbConnector.Writer()
 
 	query := `UPDATE price 
 				SET amount = $1,
@@ -245,11 +315,11 @@ func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, price entity.
 					updated_at = $5
 				WHERE fk_product_id = $6`
 
-	row, err := connectorWriter.Exec(ctx, query, price.Amount, price.Currency, price.StartedAt, price.EndedAt, price.UpdatedAt, price.ProductId)
+	row, err := tx.Exec(ctx, query, price.Amount, price.Currency, price.StartedAt, price.EndedAt, price.UpdatedAt, price.ProductId)
 	if err != nil {
 		return 0, err
 	}
 
-	rowsAffected := row.RowsAffected()
+	rowsAffected = row.RowsAffected()
 	return rowsAffected, nil
 }

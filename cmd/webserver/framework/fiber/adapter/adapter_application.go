@@ -2,7 +2,7 @@ package adapter
 
 import (
 	"context"
-
+	"strconv"
 	"go.uber.org/zap"
 
 	"github.com/go-inventory-v2/application/config"
@@ -42,6 +42,10 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 
 	logger.Info(ctx, "ProductGet called")
 
+	// Debugging: Log the incoming traceparent header for tracing purposes
+	traceparent := ctxFiber.Get("traceparent")
+	logger.Debug(ctx, " ***** Incoming traceparent *****", zap.String("traceparent", traceparent))
+
 	logger.Debug(
 		ctxWithTimeout,
 		a.cfg.App.Name,
@@ -57,6 +61,9 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 
 	product := external.ProductRequest{
 		Sku: sku,
+	}
+	if id, err := strconv.Atoi(sku); err == nil {
+		product.ID = id
 	}
 
 	res, err := a.application.ProductController.ProductGet(ctxWithTimeout, product)

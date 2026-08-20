@@ -26,9 +26,9 @@ type ProductRepository struct {
 
 type IProductRepository interface {
 	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
-	ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error)
+	ProductAdd(ctx context.Context, tx pgx.Tx, product entity.Product) (*entity.Product, error)
 	ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error)
-	ProductPut(ctx context.Context, product entity.Product) (int64, error)
+	ProductPut(ctx context.Context, tx pgx.Tx, product entity.Product) (int64, error)
 }
 
 func NewProductRepository(dbConnector connector.IDatabaseConnector) IProductRepository {
@@ -51,14 +51,21 @@ func (p *ProductRepository) BeginTx(ctx context.Context, opts pgx.TxOptions) (pg
 	return tx, nil
 }
 
-func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error) {
+func (p *ProductRepository) ProductAdd(ctx context.Context, tx pgx.Tx, product entity.Product) (res_product *entity.Product, err error) {
+	logger.Info(ctx, "product repository ProductAdd called")
+
 	tracer := otel.Tracer("inventory.repository")
 	ctx, span := tracer.Start(ctx, "ProductRepository.ProductAdd")
 	defer span.End()
-	
-	logger.Info(ctx, "product repository ProductAdd called")
 
-	var err error
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_product_add_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_product_add_duration_seconds")
+	start := time.Now()
+
+	counter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", "ProductAdd"),
+	))
 
 	defer func() {
 		if err != nil {
@@ -66,9 +73,10 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Produ
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "product repository ProductAdd failed", zap.Error(err))
 		}
+        histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+            attribute.String("operation", "ProductAdd"),
+        ))
 	}()
-
-	connectorWriter := p.dbConnector.Writer()
 
 	query := `INSERT INTO product ( sku, 
 									type,
@@ -79,10 +87,10 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Produ
 									created_at) 
 				VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 
-	rows := connectorWriter.QueryRow(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.CreatedAt)
+	rows := tx.QueryRow(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.CreatedAt)
 
 	var id int
-	if err := rows.Scan(&id); err != nil {
+	if err = rows.Scan(&id); err != nil {
 		return nil, err
 	}
 
@@ -90,7 +98,9 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, product entity.Produ
 	return &product, nil
 }
 
-func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error) {
+func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
+	logger.Info(ctx, "product repository ProductGet called")
+
 	tracer := otel.Tracer("inventory.repository")
     ctx, span := tracer.Start(ctx, "ProductRepository.ProductGet")
     defer span.End()
@@ -103,10 +113,6 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
     counter.Add(ctx, 1, metric.WithAttributes(
         attribute.String("operation", "ProductGet"),
     ))
-
-	logger.Info(ctx, "product repository ProductGet called")
-
-	var err error
 
 	defer func() {
 		if err != nil {
@@ -121,6 +127,13 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 
 	// Get a reader connection from the database connector
 	connectorReader := p.dbConnector.Reader()
+	
+	var where string
+	if product.ID != 0 {
+		where = "id = $1"
+	} else {
+		where = "sku = $1"
+	}
 
 	query := `SELECT id,
 					 sku, 
@@ -131,9 +144,17 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 					 expires_at,
 					 created_at,
 					 updated_at
-	 		  FROM product WHERE sku = $1`
+	 		  FROM product WHERE ` + where
 
-	rows, err := connectorReader.Query(ctx, query, product.Sku)
+	var arg interface{}
+	if product.Sku == "" {
+		arg = product.ID
+	} else {
+		arg = product.Sku
+	}
+
+	var rows pgx.Rows
+	rows, err = connectorReader.Query(ctx, query, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -144,33 +165,42 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 		if err != nil {
 			return nil, err
 		}
+		res_product = &product
 	} else {
 		logger.Warn(ctx, "not found", zap.String("sku", product.Sku))
 		err = errors.New("product not found")
 		return nil, err
 	}
 
-	return &product, nil
+	return res_product, nil
 }
 
-func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Product) (int64, error) {
+func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product entity.Product) (rowsAffected int64, err error) {
+	logger.Info(ctx, "product repository ProductPut called")
+
 	tracer := otel.Tracer("inventory.repository")
     ctx, span := tracer.Start(ctx, "ProductRepository.ProductPut")
     defer span.End()
 
-	logger.Info(ctx, "product repository ProductPut called")
-
-	var err error
-
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_product_put_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_product_put_duration_seconds")
+	start := time.Now()
+	
+	counter.Add(ctx, 1, metric.WithAttributes(
+        attribute.String("operation", "ProductPut"),
+    ))
+	
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
 			logger.Error(ctx, "product repository ProductPut failed", zap.Error(err))
 		}
+        histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+            attribute.String("operation", "ProductPut"),
+        ))
 	}()
-
-	connectorWriter := p.dbConnector.Writer()
 
 	query := `UPDATE product 
 				SET sku = $1,
@@ -182,7 +212,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Produ
 					updated_at = $7
 				WHERE id = $8`
 
-	row, err := connectorWriter.Exec(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.UpdatedAt, product.ID)
+	row, err := tx.Exec(ctx, query, product.Sku, product.Type, product.Name, product.Status, product.LeadTime, product.ExpiresAt, product.UpdatedAt, product.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -192,5 +222,6 @@ func (p *ProductRepository) ProductPut(ctx context.Context, product entity.Produ
 		return 0, nil
 	}
 
-	return row.RowsAffected(), nil
+	rowsAffected = row.RowsAffected()
+	return rowsAffected, nil
 }
