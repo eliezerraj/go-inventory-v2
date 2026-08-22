@@ -27,6 +27,7 @@ type IProductUseCase interface {
 	ProductAdd(ctx context.Context, product entity.Product) (*entity.Product, error)
 	ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error)
 	ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error)
+	InventoryPatch(ctx context.Context, product entity.Product) (*entity.Product, error)
 }
 
 func NewProductUseCase(productRepository repository.IProductRepository, 
@@ -54,16 +55,19 @@ func (p *ProductUsecase) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.T
 func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
 	logger.Info(ctx, "product usecase ProductAdd called")
 
+	// Tracer for OpenTelemetry
 	tracer := otel.Tracer("inventory.repository")
 	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductAdd")
 	defer span.End()
 
+	// Begin transaction
 	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductAdd failed to begin transaction", zap.Error(err))
 		return nil, err
 	}
 
+	// Defer rollback or commit based on the outcome of the operation
 	defer func() {
 		if err != nil {
 			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr != pgx.ErrTxClosed {
@@ -126,22 +130,26 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error) {
 	logger.Info(ctx, "product usecase ProductGet called")
 
-	tracer := otel.Tracer("inventory.repository")
+	// Tracer for OpenTelemetry
+	tracer := otel.Tracer("product.repository")
 	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductGet")
 	defer span.End()
 
+	// Get product
 	res, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductGet failed", zap.Error(err))
 		return nil, err
 	}
 
+	// Get inventory and price for the product
 	inv, err := p.inventoryPriceRepository.InventoryGet(ctx, entity.Inventory{ProductId: res.ID})
 	if err != nil {
 		logger.Warn(ctx, "product usecase ProductGet failed to get inventory", zap.Error(err))
 	}
 	res.Inventory = inv
 
+	// Get price for the product
 	price, err := p.inventoryPriceRepository.PriceGet(ctx, entity.Price{ProductId: res.ID})
 	if err != nil {
 		logger.Warn(ctx, "product usecase ProductGet failed to get price", zap.Error(err))
@@ -154,7 +162,8 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
 	logger.Info(ctx, "product usecase ProductPut called")
 
-	tracer := otel.Tracer("inventory.repository")
+	// Tracer for OpenTelemetry
+	tracer := otel.Tracer("product.repository")
 	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductPut")
 	defer span.End()
 
@@ -219,7 +228,8 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	if product.Price.EndedAt == nil{
 		product.Price.EndedAt = res_price.EndedAt
 	}
-
+	
+	// Update price
 	upd_price, err := p.inventoryPriceRepository.PricePut(ctx, tx, *product.Price)
 	if err != nil {
 		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
@@ -245,5 +255,77 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 		return nil, errors.New("inventory not found")
 	}
 	
+	return &product, nil
+}
+
+func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
+	logger.Info(ctx, "product usecase InventoryPatch called")
+
+	// Tracer for OpenTelemetry
+	tracer := otel.Tracer("product.usecase")
+	ctx, span := tracer.Start(ctx, "ProductUsecase.InventoryPatch")
+	defer span.End()
+
+	// Begin transaction
+	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
+	if err != nil {
+		logger.Error(ctx, "product usecase InventoryPatch failed to begin transaction", zap.Error(err))
+		return nil, err
+	}
+
+	// Defer rollback or commit based on the outcome of the operation
+	defer func() {
+		if err != nil {
+			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr != pgx.ErrTxClosed {
+				logger.Error(ctx, "product usecase InventoryPatch failed to rollback transaction", zap.Error(rollbackErr))
+			}
+		} else {
+			if commitErr := tx.Commit(ctx); commitErr != nil {
+				logger.Error(ctx, "product usecase InventoryPatch failed to commit transaction", zap.Error(commitErr))
+				err = commitErr
+			}
+		}
+	}()
+
+	logger.Info(ctx, "====1===>", zap.Any("product", product))
+
+	// Get the product to ensure it exists and retrieve its ID
+	res_prod, err := p.productRepository.ProductGet(ctx, product)
+	if err != nil {
+		logger.Error(ctx, "product usecase InventoryPatch failed to get product", zap.Error(err))
+		return nil, err
+	}
+
+	logger.Info(ctx, "====2===>", zap.Any("res_prod", res_prod))
+
+	inventory := entity.Inventory{
+		ProductId: res_prod.ID,
+	}
+
+	logger.Info(ctx, "====3===>", zap.Any("inventory", inventory))
+
+	// Get the inventory to ensure it exists and retrieve its ID
+	res_inv, err := p.inventoryPriceRepository.InventoryGet(ctx, inventory)
+	if err != nil {
+		logger.Error(ctx, "product usecase InventoryPatch failed", zap.Error(err))
+		return nil, err
+	}
+
+	product.Inventory.ID = res_inv.ID
+	updatedAt := time.Now().UTC()
+	product.Inventory.UpdatedAt = &updatedAt
+
+	// Update inventory
+	upd_inv, err := p.inventoryPriceRepository.InventoryPatch(ctx, tx, *product.Inventory)
+	if err != nil {
+		logger.Error(ctx, "product usecase InventoryPatch failed", zap.Error(err))
+		return nil, err
+	}
+
+	if upd_inv == 0{
+		logger.Warn(ctx, "product usecase InventoryPatch: no rows affected, inventory not found", zap.Int("product_id", product.Inventory.ProductId))
+		return nil, errors.New("inventory not found")
+	}
+
 	return &product, nil
 }

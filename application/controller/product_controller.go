@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel"
 
@@ -121,6 +122,39 @@ func (p *ProductController) ProductPut(ctx context.Context, req external.Product
 	res, err := p.productUseCase.ProductPut(ctx, product)
 	if err != nil {
 		logger.Error(ctx, "product controller ProductPut failed", zap.Error(err))
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (p *ProductController) InventoryPatch(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
+	tracer := otel.Tracer("product.controller")
+	ctx, span := tracer.Start(ctx, "ProductController.InventoryPatch")
+	defer span.End()
+	
+	logger.Info(ctx, "product controller InventoryPatch called")
+	
+	product := entity.Product{
+		ID:  req.ID,
+		Sku: req.Sku,
+	}
+
+	if req.Inventory != nil {
+		inventory := entity.Inventory{
+			Available:   req.Inventory.Available,
+			Pending:     req.Inventory.Pending,
+			Sold:        req.Inventory.Sold,
+		}
+		product.Inventory = &inventory
+	} else {
+		logger.Error(ctx, "product controller InventoryPatch failed: inventory is nil")
+		return nil, errors.New("inventory not informed")
+	}
+
+	res, err := p.productUseCase.InventoryPatch(ctx, product)
+	if err != nil {
+		logger.Error(ctx, "product controller InventoryPatch failed", zap.Error(err))
 		return nil, err
 	}
 
