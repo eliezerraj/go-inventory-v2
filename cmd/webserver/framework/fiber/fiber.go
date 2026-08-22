@@ -100,10 +100,14 @@ func (s *FiberServer) SetupRoutes(application *application.Application) {
 	root.Get("/health", adapters.metadataAdp.HealthGet)
 
 	appRoutes := root.Group("/v1")
+	
 	appRoutes.Get("/info", adapters.metadataAdp.InfoGet)
 	appRoutes.Get("/echo-header", adapters.metadataAdp.HeadersGet)
 	appRoutes.Get("/echo-context", adapters.metadataAdp.ContextGet)
+	
 	appRoutes.Get("/product/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.ProductGet))
 	appRoutes.Post("/product", middleware.MetricsMiddleware(adapters.applicationAdp.ProductAdd))
 	appRoutes.Put("/product/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.ProductPut))
+
+	appRoutes.Patch("/product/inventory/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.InventoryPatch))
 }

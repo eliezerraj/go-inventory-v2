@@ -50,10 +50,13 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 		ctxWithTimeout,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
+		zap.String("host", ctxFiber.Hostname()),
+		zap.String("path", ctxFiber.Path()),
 		zap.ByteString("query", ctxFiber.Request().URI().QueryString()),
 		zap.ByteString("body", ctxFiber.Body()),
 	)
 
+	// Decide whether to get the SKU from the path parameter or the query parameter
 	sku := ctxFiber.Params("sku")
 	if sku == "" {
 		sku = ctxFiber.Query("sku")
@@ -97,9 +100,12 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 		ctxWithTimeout,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
+		zap.String("host", ctxFiber.Hostname()),
+		zap.String("path", ctxFiber.Path()),
 		zap.ByteString("query", ctxFiber.Request().URI().QueryString()),
 		zap.ByteString("body", ctxFiber.Body()),
 	)
+
 	product := external.ProductRequest{}
 	if err := ctxFiber.BodyParser(&product); err != nil {
 		logger.Error(ctxWithTimeout, "failed to parse request body", zap.Error(err))
@@ -144,6 +150,8 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 		ctxWithTimeout,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
+		zap.String("host", ctxFiber.Hostname()),
+		zap.String("path", ctxFiber.Path()),
 		zap.ByteString("query", ctxFiber.Request().URI().QueryString()),
 		zap.ByteString("body", ctxFiber.Body()),
 	)
@@ -161,7 +169,7 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
-	// Parameter "sku" can be passed either as a path parameter or as a query parameter. If it's not provided in the path, we check the query parameters.
+	// Parameter "sku" can be passed either as a path parameter or as a query parameter.
 	sku := ctxFiber.Params("sku")
 	if sku == "" {
 		sku = ctxFiber.Query("sku")
@@ -183,6 +191,68 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 
 	resp := external.ProductResponse{
 		Response: "Product inventory updated successfully",
+		Product: res,
+	}
+
+	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (a *ApplicationAdapter) InventoryPatch(ctxFiber *fiber.Ctx) error {
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
+	defer cancel()
+
+	logger.Info(ctxWithTimeout, "InventoryPatch called")
+
+	logger.Debug(
+		ctxWithTimeout,
+		a.cfg.App.Name,
+		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
+		zap.String("host", ctxFiber.Hostname()),
+		zap.String("path", ctxFiber.Path()),
+		zap.ByteString("query", ctxFiber.Request().URI().QueryString()),
+		zap.ByteString("body", ctxFiber.Body()),
+	)
+
+	product := external.ProductRequest{}
+	if err := ctxFiber.BodyParser(&product); err != nil {
+		logger.Error(ctxWithTimeout, "failed to parse request body", zap.Error(err))
+		errorResponse := external.NewResponseError(ctxWithTimeout,
+			fiber.StatusBadRequest,
+			fiber.ErrBadRequest,
+			fiber.ErrBadRequest.Message,
+			"failed to parse request body",
+			err.Error(),
+			external.BUSSINESS_ERROR)
+		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
+	}
+
+	// Decide whether to get the SKU from the path parameter or the query parameter
+	sku := ctxFiber.Params("sku")
+	if sku == "" {
+		sku = ctxFiber.Query("sku")
+	}
+
+	if id, err := strconv.Atoi(sku); err == nil {
+		product.ID = id
+	} else {
+		product.Sku = sku
+	}
+
+	res, err := a.application.ProductController.InventoryPatch(ctxWithTimeout, product)
+	if err != nil {
+		logger.Error(ctxWithTimeout, "failed to update inventory", zap.Error(err))
+		errorResponse := external.NewResponseError(ctxWithTimeout,
+			fiber.StatusNotFound,
+			fiber.ErrNotFound,
+			fiber.ErrNotFound.Message,
+			"failed to update inventory",
+			err.Error(),
+			external.BUSSINESS_ERROR)
+		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
+	}
+
+	resp := external.ProductResponse{
+		Response: "Inventory updated successfully",
 		Product: res,
 	}
 

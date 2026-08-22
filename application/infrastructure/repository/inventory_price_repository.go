@@ -28,6 +28,7 @@ type IInventoryPriceRepository interface {
 	InventoryAdd(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (*entity.Inventory, error)
 	InventoryGet(ctx context.Context, inventory entity.Inventory) (*entity.Inventory, error)
 	InventoryPut(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (int64, error)
+	InventoryPatch(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (int64, error)
 	PriceAdd(ctx context.Context, tx pgx.Tx, price entity.Price) (*entity.Price, error)
 	PriceGet(ctx context.Context, price entity.Price) (*entity.Price, error)
 	PricePut(ctx context.Context, tx pgx.Tx, price entity.Price) (int64, error)
@@ -126,7 +127,13 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 
 	connectorReader := ipr.dbConnector.Reader()
 
-	query := `SELECT id, fk_product_id, available, pending, sold, created_at, updated_at 
+	query := `SELECT id, 
+					fk_product_id, 
+					available, 
+					pending, 
+					sold, 
+					created_at, 
+					updated_at 
 				FROM inventory 
 				WHERE fk_product_id = $1`
 
@@ -180,6 +187,54 @@ func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, tx pgx.Tx
 	row, err := tx.Exec(ctx, query, inventory.Available, inventory.Pending, inventory.Sold, inventory.UpdatedAt, inventory.ProductId)
 	if err != nil {
 		return 0, err
+	}
+
+	rowsAffected = row.RowsAffected()
+	return rowsAffected, nil
+}
+
+func (ipr *InventoryPriceRepository) InventoryPatch(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (rowsAffected int64, err error) {
+	logger.Info(ctx, "inventory price repository InventoryPatch called")
+
+	tracer := otel.Tracer("inventory_price.repository")
+    ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryPatch")
+    defer span.End()
+
+	meter := otel.Meter("go-inventory-v2.repository")
+	counter, _ := meter.Int64Counter("db_custom_inventory_patch_requests_total")
+	histogram, _ := meter.Float64Histogram("db_custom_inventory_patch_duration_seconds")
+	start := time.Now()
+	
+	counter.Add(ctx, 1, metric.WithAttributes(
+        attribute.String("operation", "InventoryPatch"),
+    ))
+	
+	defer func() {
+		if err != nil {
+			span.RecordError(err) 
+			span.SetStatus(codes.Error, err.Error())
+			logger.Error(ctx, "inventory price repository InventoryPatch failed", zap.Error(err))
+		}
+        histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
+            attribute.String("operation", "InventoryPatch"),
+        ))
+	}()
+
+	query := `UPDATE inventory 
+				SET available = available + $1,
+					sold = sold + $2,
+					pending = pending + $3,
+					updated_at = $4
+				WHERE id = $5`
+
+	row, err := tx.Exec(ctx, query, inventory.Available, inventory.Sold, inventory.Pending, inventory.UpdatedAt, inventory.ID)
+	if err != nil {
+		return 0, err
+	}
+
+	if row.RowsAffected() == 0 {
+		logger.Warn(ctx, "inventory price repository InventoryPatch: no rows affected, inventory not found", zap.Int("inventory_id", inventory.ID))
+		return 0, nil
 	}
 
 	rowsAffected = row.RowsAffected()
