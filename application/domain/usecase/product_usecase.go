@@ -11,10 +11,11 @@ import (
 
 	"github.com/go-inventory-v2/application/domain/entity"
 	"github.com/go-inventory-v2/application/infrastructure/repository"
+	"github.com/go-inventory-v2/application/tracing"
 
 	"github.com/jackc/pgx/v5"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ProductUsecase struct {
@@ -56,8 +57,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductAdd called")
 
 	// Tracer for OpenTelemetry
-	tracer := otel.Tracer("inventory.repository")
-	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductAdd")
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.ProductAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	// Begin transaction
@@ -131,8 +131,7 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductGet called")
 
 	// Tracer for OpenTelemetry
-	tracer := otel.Tracer("product.repository")
-	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductGet")
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.ProductGet", trace.SpanKindInternal)
 	defer span.End()
 
 	// Get product
@@ -163,8 +162,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductPut called")
 
 	// Tracer for OpenTelemetry
-	tracer := otel.Tracer("product.repository")
-	ctx, span := tracer.Start(ctx, "ProductUsecase.ProductPut")
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.ProductPut", trace.SpanKindInternal)
 	defer span.End()
 
 	// Start tx
@@ -262,8 +260,7 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	logger.Info(ctx, "product usecase InventoryPatch called")
 
 	// Tracer for OpenTelemetry
-	tracer := otel.Tracer("product.usecase")
-	ctx, span := tracer.Start(ctx, "ProductUsecase.InventoryPatch")
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.InventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	// Begin transaction
@@ -287,8 +284,6 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 		}
 	}()
 
-	logger.Info(ctx, "====1===>", zap.Any("product", product))
-
 	// Get the product to ensure it exists and retrieve its ID
 	res_prod, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
@@ -296,13 +291,9 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 		return nil, err
 	}
 
-	logger.Info(ctx, "====2===>", zap.Any("res_prod", res_prod))
-
 	inventory := entity.Inventory{
 		ProductId: res_prod.ID,
 	}
-
-	logger.Info(ctx, "====3===>", zap.Any("inventory", inventory))
 
 	// Get the inventory to ensure it exists and retrieve its ID
 	res_inv, err := p.inventoryPriceRepository.InventoryGet(ctx, inventory)

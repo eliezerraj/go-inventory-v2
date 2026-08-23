@@ -38,6 +38,7 @@ func setupLogging(cfg *config.Config) {
 
 // Setup observability
 func setupObservability(cfg *config.Config){
+	logger.InfoOutCtx("setting up observability")
 
 	var tracerProvider *tracing.TracerProvider
 	
@@ -73,6 +74,8 @@ func setupObservability(cfg *config.Config){
 
 // Setup metrics
 func setupMetrics(cfg *config.Config) {
+	logger.InfoOutCtx("setting up metrics")
+	
 	ctx := context.Background()
 
 	mp, err := coreMetricLib.NewMeterProvider(ctx, coreMetricLib.InfoMetric{
