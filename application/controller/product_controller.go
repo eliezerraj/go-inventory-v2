@@ -2,10 +2,8 @@ package controller
 
 import (
 	"context"
-	"errors"
-	"go.uber.org/zap"
 
-	"github.com/go-playground/validator/v10"
+	"go.uber.org/zap"
 
 	"github.com/eliezerraj/go-core/v3/logger"
 
@@ -13,76 +11,26 @@ import (
 	"github.com/go-inventory-v2/application/domain/external"
 	"github.com/go-inventory-v2/application/domain/entity"
 	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/controller/validator"
 
 	"go.opentelemetry.io/otel/trace"
 )
 
 type ProductController struct {
-	schema Schema
+	schema validator.Schema
 	productUseCase usecase.IProductUseCase
-}
-
-// Schema struct defines a validation schema for product requests.
-type Schema struct {
-    Validate func(context.Context, any) error
-}
-
-func inventoryPatchSchema() Schema {
-    return Schema{
-        Validate: func(ctx context.Context, data any) error {
-			
-			req, ok := data.(external.ProductRequest)
-			if !ok {
-                return errors.New("schema validation failed ! Please check the request body and try again.")
-            }
-
-			if req.Inventory == nil {
-                return errors.New("schema validation failed ! field inventory is mandatory")
-            }
-
-            return nil
-        },
-    }
-}
-
-// Use in ProductAdd and ProductPut.
-func productAddSchema() Schema {
-    return Schema{
-        Validate: func(ctx context.Context, data any) error {
-            
-			req, ok := data.(external.ProductRequest)
-			if !ok {
-                return errors.New("schema validation failed ! Please check the request body and try again.")
-            }
-
-			validate := validator.New()
-			err := validate.Struct(req)
-			if err != nil {
-				return errors.New("schema validation failed ! Please check the request body data and try again.")
-			}
-
-            if req.Price == nil {
-                return errors.New("schema validation failed ! field price is mandatory")
-            }
-
-            if req.Inventory == nil {
-                return errors.New("schema validation failed ! field inventory is mandatory")
-            }
-
-            return nil
-        },
-    }
 }
 
 // NewProductController creates a new instance of ProductController with the provided product use case.
 func NewProductController(productUseCase usecase.IProductUseCase) *ProductController {
 	logger.InfoOutCtx("initializing product controller SUCCESSFULLY")
 
-	schema := Schema{
-		Validate: func(ctx context.Context, data any) error {
-			return nil
-		},
-	}
+	schema := validator.Schema{
+			Validate: func(ctx context.Context, data any) error {
+				return nil
+			},
+		}
+
 	return &ProductController{
 		schema:           schema,
 		productUseCase:   productUseCase,
@@ -97,8 +45,7 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 	defer span.End()
 
 	// Schema validation
-	schema := productAddSchema()
-    if err := schema.Validate(ctx, req); err != nil {
+	if err := p.schema.ProductAddSchema().Validate(ctx, req); err != nil {
         return nil, err
     }
 
@@ -164,8 +111,7 @@ func (p *ProductController) ProductPut(ctx context.Context, req external.Product
 	defer span.End()
 	
 	// Schema validation
-	schema := productAddSchema()
-	if err := schema.Validate(ctx, req); err != nil {
+	if err := p.schema.ProductAddSchema().Validate(ctx, req); err != nil {
 		return nil, err
 	}
 
@@ -209,8 +155,7 @@ func (p *ProductController) InventoryPatch(ctx context.Context, req external.Pro
 	defer span.End()
 	
 	// Schema validation
-	schema := inventoryPatchSchema()
-	if err := schema.Validate(ctx, req); err != nil {
+	if err := p.schema.InventoryPatchSchema().Validate(ctx, req); err != nil {
 		return nil, err
 	}
 
