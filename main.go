@@ -38,6 +38,7 @@ func setupLogging(cfg *config.Config) {
 
 // Setup observability
 func setupObservability(cfg *config.Config){
+	logger.InfoOutCtx("setting up observability")
 
 	var tracerProvider *tracing.TracerProvider
 	
@@ -73,6 +74,8 @@ func setupObservability(cfg *config.Config){
 
 // Setup metrics
 func setupMetrics(cfg *config.Config) {
+	logger.InfoOutCtx("setting up metrics")
+	
 	ctx := context.Background()
 
 	mp, err := coreMetricLib.NewMeterProvider(ctx, coreMetricLib.InfoMetric{
@@ -97,15 +100,6 @@ func setupMetrics(cfg *config.Config) {
             logger.ErrorOutCtx("metrics server error", zap.Error(err))
         }
     }()
-}
-
-// getCmd retrieves the command type from the environment variable or uses the default value.
-func getCmd(env string, val string) string {
-	cmd := os.Getenv(env)
-	if cmd == "" {
-		cmd = val
-	}
-	return cmd
 }
 
 func main() {
@@ -134,10 +128,8 @@ func main() {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 
-	// Determine the command type and execute the corresponding process
-	cmd := getCmd("COMMAND_TYPE", "webserver")
-
-	switch cmd {
+	// Define the process type webserver or worker.
+	switch cfg.App.Type {
 	case "worker":
 		logger.InfoOutCtx("worker process NOT implemented")
 	case "webserver":

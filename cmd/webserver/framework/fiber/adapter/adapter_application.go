@@ -8,13 +8,14 @@ import (
 	"github.com/go-inventory-v2/application/config"
 	"github.com/go-inventory-v2/application/infrastructure/application"
 	"github.com/go-inventory-v2/application/domain/external"
+	"github.com/go-inventory-v2/application/tracing"
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/http/utils"
 
 	"github.com/gofiber/fiber/v2"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ApplicationAdapter struct {
@@ -36,8 +37,8 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
-	tracer := otel.Tracer("product.adapter")
-	ctx, span := tracer.Start(ctxWithTimeout, "ApplicationAdapter.ProductGet")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Info(ctx, "ProductGet called")
@@ -94,10 +95,14 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
-	logger.Info(ctxWithTimeout, "ProductAdd called")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productAdd", trace.SpanKindInternal)
+	defer span.End()
+
+	logger.Info(ctx, "ProductAdd called")
 
 	logger.Debug(
-		ctxWithTimeout,
+		ctx,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
 		zap.String("host", ctxFiber.Hostname()),
@@ -108,8 +113,8 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 
 	product := external.ProductRequest{}
 	if err := ctxFiber.BodyParser(&product); err != nil {
-		logger.Error(ctxWithTimeout, "failed to parse request body", zap.Error(err))
-		errorResponse := external.NewResponseError(ctxWithTimeout,
+		logger.Error(ctx, "failed to parse request body", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusBadRequest,
 			fiber.ErrBadRequest,
 			fiber.ErrBadRequest.Message,
@@ -119,10 +124,10 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
-	res, err := a.application.ProductController.ProductAdd(ctxWithTimeout, product)
+	res, err := a.application.ProductController.ProductAdd(ctx, product)
 	if err != nil {
-		logger.Error(ctxWithTimeout, "failed to add product inventory", zap.Error(err))
-		errorResponse := external.NewResponseError(ctxWithTimeout,
+		logger.Error(ctx, "failed to add product inventory", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusInternalServerError,
 			fiber.ErrInternalServerError,
 			fiber.ErrInternalServerError.Message,
@@ -144,10 +149,14 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
-	logger.Info(ctxWithTimeout, "ProductPut called")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productPut", trace.SpanKindInternal)
+	defer span.End()
+	
+	logger.Info(ctx, "ProductPut called")
 
 	logger.Debug(
-		ctxWithTimeout,
+		ctx,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
 		zap.String("host", ctxFiber.Hostname()),
@@ -158,8 +167,8 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 
 	product := external.ProductRequest{}
 	if err := ctxFiber.BodyParser(&product); err != nil {
-		logger.Error(ctxWithTimeout, "failed to parse request body", zap.Error(err))
-		errorResponse := external.NewResponseError(ctxWithTimeout,
+		logger.Error(ctx, "failed to parse request body", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusBadRequest,
 			fiber.ErrBadRequest,
 			fiber.ErrBadRequest.Message,
@@ -176,10 +185,10 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 	}
 	product.Sku = sku
 
-	res, err := a.application.ProductController.ProductPut(ctxWithTimeout, product)
+	res, err := a.application.ProductController.ProductPut(ctx, product)
 	if err != nil {
-		logger.Error(ctxWithTimeout, "failed to update product inventory", zap.Error(err))
-		errorResponse := external.NewResponseError(ctxWithTimeout,
+		logger.Error(ctx, "failed to update product inventory", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusNotFound,
 			fiber.ErrNotFound,
 			fiber.ErrNotFound.Message,
@@ -201,10 +210,14 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber *fiber.Ctx) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
-	logger.Info(ctxWithTimeout, "InventoryPatch called")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.inventoryPatch", trace.SpanKindInternal)
+	defer span.End()
+
+	logger.Info(ctx, "InventoryPatch called")
 
 	logger.Debug(
-		ctxWithTimeout,
+		ctx,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
 		zap.String("host", ctxFiber.Hostname()),
@@ -215,8 +228,8 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber *fiber.Ctx) error {
 
 	product := external.ProductRequest{}
 	if err := ctxFiber.BodyParser(&product); err != nil {
-		logger.Error(ctxWithTimeout, "failed to parse request body", zap.Error(err))
-		errorResponse := external.NewResponseError(ctxWithTimeout,
+		logger.Error(ctx, "failed to parse request body", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusBadRequest,
 			fiber.ErrBadRequest,
 			fiber.ErrBadRequest.Message,
@@ -238,10 +251,10 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber *fiber.Ctx) error {
 		product.Sku = sku
 	}
 
-	res, err := a.application.ProductController.InventoryPatch(ctxWithTimeout, product)
+	res, err := a.application.ProductController.InventoryPatch(ctx, product)
 	if err != nil {
-		logger.Error(ctxWithTimeout, "failed to update inventory", zap.Error(err))
-		errorResponse := external.NewResponseError(ctxWithTimeout,
+		logger.Error(ctx, "failed to update inventory", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusNotFound,
 			fiber.ErrNotFound,
 			fiber.ErrNotFound.Message,

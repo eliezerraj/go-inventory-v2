@@ -12,9 +12,11 @@ import (
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/database/connector"
+	"github.com/go-inventory-v2/application/tracing"
 
 	"go.opentelemetry.io/otel"
 
+	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/attribute"
@@ -54,8 +56,8 @@ func (p *ProductRepository) BeginTx(ctx context.Context, opts pgx.TxOptions) (pg
 func (p *ProductRepository) ProductAdd(ctx context.Context, tx pgx.Tx, product entity.Product) (res_product *entity.Product, err error) {
 	logger.Info(ctx, "product repository ProductAdd called")
 
-	tracer := otel.Tracer("inventory.repository")
-	ctx, span := tracer.Start(ctx, "ProductRepository.ProductAdd")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productRepository.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -101,9 +103,9 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, tx pgx.Tx, product e
 func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
 	logger.Info(ctx, "product repository ProductGet called")
 
-	tracer := otel.Tracer("inventory.repository")
-    ctx, span := tracer.Start(ctx, "ProductRepository.ProductGet")
-    defer span.End()
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productRepository.productGet", trace.SpanKindInternal)
+	defer span.End()
 
     meter := otel.Meter("go-inventory-v2.repository")
     counter, _ := meter.Int64Counter("db_custom_product_get_requests_total")
@@ -178,9 +180,9 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product entity.Product) (rowsAffected int64, err error) {
 	logger.Info(ctx, "product repository ProductPut called")
 
-	tracer := otel.Tracer("inventory.repository")
-    ctx, span := tracer.Start(ctx, "ProductRepository.ProductPut")
-    defer span.End()
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "productRepository.productPut", trace.SpanKindInternal)
+	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
 	counter, _ := meter.Int64Counter("db_custom_product_put_requests_total")
@@ -191,6 +193,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product e
         attribute.String("operation", "ProductPut"),
     ))
 	
+	// Defer function to record metrics and handle errors
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 

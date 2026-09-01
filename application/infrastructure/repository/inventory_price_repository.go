@@ -9,10 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/go-inventory-v2/application/domain/entity"
+	"github.com/go-inventory-v2/application/tracing"
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/database/connector"
 
+	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/attribute"
@@ -55,9 +57,8 @@ func (ipr *InventoryPriceRepository) BeginTx(ctx context.Context, opts pgx.TxOpt
 func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (res_inventory *entity.Inventory, err error) {
 	logger.Info(ctx, "inventory price repository InventoryAdd called")
 
-	// Start tracing and metrics
-	tracer := otel.Tracer("inventory_price.repository")
-	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryAdd")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -101,8 +102,8 @@ func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, tx pgx.Tx
 func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory entity.Inventory) (res_inventory *entity.Inventory, err error) {
 	logger.Info(ctx, "inventory price repository InventoryGet called")
 
-	tracer := otel.Tracer("inventory_price.repository")
-	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryGet")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryGet", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -150,9 +151,8 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (rowsAffected int64, err error) {
 	logger.Info(ctx, "inventory price repository InventoryPut called", zap.Any("inventory", inventory))
 
-	// Start tracing and metrics
-	tracer := otel.Tracer("inventory_price.repository")
-	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryPut")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryPut", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -196,9 +196,9 @@ func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, tx pgx.Tx
 func (ipr *InventoryPriceRepository) InventoryPatch(ctx context.Context, tx pgx.Tx, inventory entity.Inventory) (rowsAffected int64, err error) {
 	logger.Info(ctx, "inventory price repository InventoryPatch called")
 
-	tracer := otel.Tracer("inventory_price.repository")
-    ctx, span := tracer.Start(ctx, "InventoryPriceRepository.InventoryPatch")
-    defer span.End()
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryPatch", trace.SpanKindInternal)
+	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
 	counter, _ := meter.Int64Counter("db_custom_inventory_patch_requests_total")
@@ -244,9 +244,8 @@ func (ipr *InventoryPriceRepository) InventoryPatch(ctx context.Context, tx pgx.
 func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.Price) (res_price *entity.Price, err error) {
 	logger.Info(ctx, "inventory price repository PriceGet called")
 
-	// Start tracing and metrics
-	tracer := otel.Tracer("inventory_price.repository")
-	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.PriceGet")
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.priceGet", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -292,8 +291,7 @@ func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, tx pgx.Tx, pr
 	logger.Info(ctx, "inventory price repository PriceAdd called")
 
 	// Start tracing and metrics
-	tracer := otel.Tracer("inventory_price.repository")
-	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.PriceAdd")
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.priceAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -336,8 +334,10 @@ func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, tx pgx.Tx, pr
 }
 
 func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, tx pgx.Tx, price entity.Price) (rowsAffected int64, err error) {
-	tracer := otel.Tracer("inventory_price.repository")
-	ctx, span := tracer.Start(ctx, "InventoryPriceRepository.PricePut")
+	logger.Info(ctx, "inventory price repository PricePut called", zap.Any("price", price))
+
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.pricePut", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -348,9 +348,8 @@ func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, tx pgx.Tx, pr
 	counter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", "PricePut"),
 	))
-
-	logger.Info(ctx, "inventory price repository PricePut called", zap.Any("price", price))
-
+	
+	//Defer function to handle error logging and metrics recording
 	defer func() {
 		if err != nil {
 			span.RecordError(err) 
