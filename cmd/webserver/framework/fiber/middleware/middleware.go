@@ -6,6 +6,8 @@ import (
 	"strings"
 	"net/http"
 
+	"github.com/eliezerraj/go-core/v3/logger"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -20,14 +22,16 @@ const RequestIDHeaderName = "x-request-id"
 // AuthorizationMiddleware is a middleware function that checks for the presence of an Authorization header in the request. If the header is missing, it returns a 401 Unauthorized response.
 func AuthorizationMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		c.Accepts("application/json")
+		logger.Info(c.UserContext(), "Checking Authorization header")
 
+		c.Accepts("application/json")
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Authorization header is required",
 			})
 		}
+
 		return c.Next()
 	}
 }

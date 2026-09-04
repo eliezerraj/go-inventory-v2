@@ -1,6 +1,11 @@
 package fiber
 
 import (
+	"time"
+	"context"
+	
+	"go.uber.org/zap"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/json-iterator/go"
 
@@ -12,6 +17,7 @@ import (
 	"github.com/go-inventory-v2/cmd/webserver/framework/fiber/middleware"
 
 	"github.com/eliezerraj/go-core/v3/logger"
+	"github.com/eliezerraj/go-core/v3/auth"
 )
 
 // Create a new Server configuration.
@@ -68,7 +74,7 @@ func NewFiberServer(cfg *config.Config) *FiberServer {
 	fiberApp := fiber.New(fiberConfig.Config)
 
 	// Setup middleware for the Fiber server
-	setupMiddleware(cfg, fiberApp)
+	setupMiddleware(fiberApp)
 
 	return &FiberServer{
 		cfg:    cfg,
@@ -77,7 +83,8 @@ func NewFiberServer(cfg *config.Config) *FiberServer {
 	}
 }
 
-func setupMiddleware(cfg *config.Config, fiberApp *fiber.App) {
+// setupMiddleware sets up the middleware for the Fiber server, including authentication and compression.
+func setupMiddleware(fiberApp *fiber.App) {
 	logger.InfoOutCtx("setting up middleware for fiber server")
 	
 	fiberApp.Use(middleware.HeaderMiddleware())
@@ -90,24 +97,47 @@ func setupMiddleware(cfg *config.Config, fiberApp *fiber.App) {
 }
 
 // SetupRoutes sets up the routes for the Fiber server using the provided application instance.
-func (s *FiberServer) SetupRoutes(application *application.Application) {
+func (s *FiberServer) SetupRoutes(cfg *config.Config, application *application.Application) {
 	logger.InfoOutCtx("setting up routes for fiber server SUCCESSFULLY")
 
 	root := s.FiberApp.Group("/")
+
+	// Create the AuthService instance and retrieve the JWKS URL
+	authService := auth.NewAuthService(	cfg.Authorization.JwksURL, 
+										cfg.Authorization.DryRun, 
+										cfg.Authorization.HeaderKey, 
+										5*time.Second)
+
+	// Retrieve the JWKS URL from the auth service
+	err := authService.GetJwksUrl(context.Background())
+	if err != nil {
+		logger.WarnOutCtx("Failed to get JWKS URL", zap.Error(err))
+	}
 
 	// Create adapters for controllers						
 	adapters := newAdapters(s.cfg, application)
 	root.Get("/health", adapters.metadataAdp.HealthGet)
 
+	// Create a group for version 1 of the API
 	appRoutes := root.Group("/v1")
 	
 	appRoutes.Get("/info", adapters.metadataAdp.InfoGet)
 	appRoutes.Get("/echo-header", adapters.metadataAdp.HeadersGet)
 	appRoutes.Get("/echo-context", adapters.metadataAdp.ContextGet)
 	
-	appRoutes.Get("/product/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.ProductGet))
-	appRoutes.Post("/product", middleware.MetricsMiddleware(adapters.applicationAdp.ProductAdd))
-	appRoutes.Put("/product/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.ProductPut))
+	appRoutes.Get("/product/:sku",
+					authService.FiberAuthorizationMiddleware(),
+					middleware.MetricsMiddleware(adapters.applicationAdp.ProductGet))
+	
+	appRoutes.Post("/product", 
+					authService.FiberAuthorizationMiddleware(),
+					middleware.MetricsMiddleware(adapters.applicationAdp.ProductAdd))
 
-	appRoutes.Patch("/product/inventory/:sku", middleware.MetricsMiddleware(adapters.applicationAdp.InventoryPatch))
+	appRoutes.Put("/product/:sku", 
+					authService.FiberAuthorizationMiddleware(),
+					middleware.MetricsMiddleware(adapters.applicationAdp.ProductPut))
+
+	appRoutes.Patch("/product/inventory/:sku", 
+					authService.FiberAuthorizationMiddleware(),
+					middleware.MetricsMiddleware(adapters.applicationAdp.InventoryPatch))
 }
