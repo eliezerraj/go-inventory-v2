@@ -1,7 +1,6 @@
 package fiber
 
 import (
-	"time"
 	"context"
 	
 	"go.uber.org/zap"
@@ -106,7 +105,7 @@ func (s *FiberServer) SetupRoutes(cfg *config.Config, application *application.A
 	authService := auth.NewAuthService(	cfg.Authorization.JwksURL, 
 										cfg.Authorization.DryRun, 
 										cfg.Authorization.HeaderKey, 
-										5*time.Second)
+										cfg.Authorization.Timeout)
 
 	// Retrieve the JWKS URL from the auth service
 	err := authService.GetJwksUrl(context.Background())
