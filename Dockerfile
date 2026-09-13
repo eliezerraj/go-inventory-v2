@@ -9,13 +9,13 @@ WORKDIR /app
 COPY . .
 RUN go mod tidy
 
-WORKDIR /app/cmd/webserver
+WORKDIR /app
 RUN go build -o go-inventory-v2 -ldflags '-linkmode external -w -extldflags "-static"'
 
 FROM alpine
 
 WORKDIR /app
-COPY --from=builder /app/cmd/webserver/go-inventory-v2 .
+COPY --from=builder /app/go-inventory-v2 .
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 CMD ["/app/go-inventory-v2"]
