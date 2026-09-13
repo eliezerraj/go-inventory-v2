@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/caarlos0/env/v8 v8.0.0
-	github.com/eliezerraj/go-core/v3 v3.0.0-20260823232348-f85e574642c6
+	github.com/eliezerraj/go-core v1.0.129
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/fiber/v2 v2.52.15
 	github.com/google/uuid v1.6.0
