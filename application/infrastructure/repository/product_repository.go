@@ -34,7 +34,7 @@ type IProductRepository interface {
 }
 
 func NewProductRepository(dbConnector connector.IDatabaseConnector) IProductRepository {
-	logger.InfoOutCtx("initializing product repository SUCCESSFULLY")
+	logger.Info(context.Background(), "initializing product repository SUCCESSFULLY")
 
 	return &ProductRepository{
 		dbConnector: dbConnector,
@@ -42,11 +42,11 @@ func NewProductRepository(dbConnector connector.IDatabaseConnector) IProductRepo
 }
 
 func (p *ProductRepository) BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error) {
-	logger.InfoOutCtx("product repository BeginTx called")
+	logger.Info(ctx,"product repository BeginTx called")
 
 	tx, err := p.dbConnector.Writer().BeginTx(ctx, opts)
 	if err != nil {
-		logger.ErrorOutCtx("product repository BeginTx failed", zap.Error(err))
+		logger.Error(ctx, "product repository BeginTx failed", zap.Error(err))
 		return nil, err
 	}
 

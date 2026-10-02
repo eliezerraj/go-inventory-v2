@@ -23,7 +23,7 @@ type ProductController struct {
 
 // NewProductController creates a new instance of ProductController with the provided product use case.
 func NewProductController(productUseCase usecase.IProductUseCase) *ProductController {
-	logger.InfoOutCtx("initializing product controller SUCCESSFULLY")
+	logger.Info(context.Background(), "initializing product controller SUCCESSFULLY")
 
 	schema := validator.Schema{
 			Validate: func(ctx context.Context, data any) error {
