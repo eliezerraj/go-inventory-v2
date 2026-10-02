@@ -33,7 +33,7 @@ type IProductUseCase interface {
 
 func NewProductUseCase(productRepository repository.IProductRepository, 
 						inventoryPriceRepository repository.IInventoryPriceRepository) IProductUseCase {
-	logger.InfoOutCtx("initializing product usecase SUCCESSFULLY")
+	logger.Info(context.Background(), "initializing product usecase SUCCESSFULLY")
 
 	return &ProductUsecase{
 		productRepository: productRepository,

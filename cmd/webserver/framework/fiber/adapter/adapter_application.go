@@ -13,7 +13,7 @@ import (
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/http/utils"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -24,7 +24,7 @@ type ApplicationAdapter struct {
 }
 
 func NewApplicationAdapter(cfg *config.Config, application *application.Application) *ApplicationAdapter {
-	logger.InfoOutCtx("initializing application adapter SUCCESSFULLY")
+	logger.Info(context.Background(), "initializing application adapter SUCCESSFULLY")
 
 	return &ApplicationAdapter{
 		cfg:         cfg,
@@ -33,22 +33,22 @@ func NewApplicationAdapter(cfg *config.Config, application *application.Applicat
 }
 
 // Adapter methods for ProductController 
-func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
-	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
+func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
+	logger.Info(ctxFiber.Context(), "ProductGet called")
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.Context(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
 	// Tracing and metrics
 	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productGet", trace.SpanKindInternal)
 	defer span.End()
 
-	logger.Info(ctx, "ProductGet called")
-
 	// Debugging: Log the incoming traceparent header for tracing purposes
 	traceparent := ctxFiber.Get("traceparent")
 	logger.Debug(ctx, " ***** Incoming traceparent *****", zap.String("traceparent", traceparent))
 
 	logger.Debug(
-		ctxWithTimeout,
+		ctx,
 		a.cfg.App.Name,
 		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
 		zap.String("host", ctxFiber.Hostname()),
@@ -91,15 +91,15 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber *fiber.Ctx) error {
 	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
-	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
+func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
+	logger.Info(ctxFiber.Context(), "ProductAdd called")
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.Context(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
 	// Tracing and metrics
 	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productAdd", trace.SpanKindInternal)
 	defer span.End()
-
-	logger.Info(ctx, "ProductAdd called")
 
 	logger.Debug(
 		ctx,
@@ -112,7 +112,7 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 	)
 
 	product := external.ProductRequest{}
-	if err := ctxFiber.BodyParser(&product); err != nil {
+	if err := ctxFiber.Bind().Body(&product); err != nil {
 		logger.Error(ctx, "failed to parse request body", zap.Error(err))
 		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusBadRequest,
@@ -145,16 +145,15 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber *fiber.Ctx) error {
 	return ctxFiber.Status(fiber.StatusCreated).JSON(resp)
 }
 
-func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
-	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
+func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
+	logger.Info(ctxFiber.Context(), "ProductPut called")
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.Context(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
 	// Tracing and metrics
 	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productPut", trace.SpanKindInternal)
 	defer span.End()
 	
-	logger.Info(ctx, "ProductPut called")
-
 	logger.Debug(
 		ctx,
 		a.cfg.App.Name,
@@ -166,7 +165,7 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 	)
 
 	product := external.ProductRequest{}
-	if err := ctxFiber.BodyParser(&product); err != nil {
+	if err := ctxFiber.Bind().Body(&product); err != nil {
 		logger.Error(ctx, "failed to parse request body", zap.Error(err))
 		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusBadRequest,
@@ -206,15 +205,15 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber *fiber.Ctx) error {
 	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (a *ApplicationAdapter) InventoryPatch(ctxFiber *fiber.Ctx) error {
-	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.UserContext(), a.cfg.HTTP.Timeout)
+func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
+	logger.Info(ctxFiber.Context(), "InventoryPatch called")
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.Context(), a.cfg.HTTP.Timeout)
 	defer cancel()
 
 	// Tracing and metrics
 	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
-
-	logger.Info(ctx, "InventoryPatch called")
 
 	logger.Debug(
 		ctx,
@@ -227,7 +226,7 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber *fiber.Ctx) error {
 	)
 
 	product := external.ProductRequest{}
-	if err := ctxFiber.BodyParser(&product); err != nil {
+	if err := ctxFiber.Bind().Body(&product); err != nil {
 		logger.Error(ctx, "failed to parse request body", zap.Error(err))
 		errorResponse := external.NewResponseError(ctx,
 			fiber.StatusBadRequest,

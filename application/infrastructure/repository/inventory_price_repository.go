@@ -37,7 +37,7 @@ type IInventoryPriceRepository interface {
 }
 
 func NewInventoryPriceRepository(dbConnector connector.IDatabaseConnector) IInventoryPriceRepository {
-	logger.InfoOutCtx("initializing inventory price repository SUCCESSFULLY")
+	logger.Info(context.Background(), "initializing inventory price repository SUCCESSFULLY")
 	return &InventoryPriceRepository{
 		dbConnector: dbConnector,
 	}
