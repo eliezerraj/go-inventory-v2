@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"errors"
 	"context"
 	"strconv"
 	"go.uber.org/zap"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-inventory-v2/application/infrastructure/application"
 	"github.com/go-inventory-v2/application/domain/external"
 	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/domain/apperrors"
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/http/utils"
@@ -72,11 +74,24 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
 
 	res, err := a.application.ProductController.ProductGet(ctxWithTimeout, product)
 	if err != nil {
-		logger.Error(ctxWithTimeout, "failed to get product inventory ", zap.Error(err))
+
+		var statusCode int
+		var statusCodeMessage string
+
+		if errors.Is(err, apperrors.ErrNotFound) {
+			logger.Warn(ctx, "product inventory not found", zap.Error(err))
+			statusCode = fiber.StatusNotFound
+			statusCodeMessage = fiber.ErrNotFound.Message
+		} else {
+			logger.Error(ctx, "failed to get product inventory ", zap.Error(err))
+			statusCode = fiber.StatusInternalServerError
+			statusCodeMessage = fiber.ErrInternalServerError.Message
+		}
+
 		errorResponse := external.NewResponseError(ctxWithTimeout,
-			fiber.StatusNotFound,
-			fiber.ErrNotFound,
-			fiber.ErrNotFound.Message,
+			statusCode,
+			fiber.NewError(statusCode),
+			statusCodeMessage,
 			"failed to get product inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
@@ -126,11 +141,23 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 
 	res, err := a.application.ProductController.ProductAdd(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "failed to add product inventory", zap.Error(err))
+		var statusCode int
+		var statusCodeMessage string
+
+		if errors.Is(err, apperrors.ErrNotFound) {
+			logger.Warn(ctx, "product inventory not found", zap.Error(err))
+			statusCode = fiber.StatusNotFound
+			statusCodeMessage = fiber.ErrNotFound.Message
+		} else {
+			logger.Error(ctx, "failed to add product inventory ", zap.Error(err))
+			statusCode = fiber.StatusInternalServerError
+			statusCodeMessage = fiber.ErrInternalServerError.Message
+		}
+
 		errorResponse := external.NewResponseError(ctx,
-			fiber.StatusInternalServerError,
-			fiber.ErrInternalServerError,
-			fiber.ErrInternalServerError.Message,
+			statusCode,
+			fiber.NewError(statusCode),
+			statusCodeMessage,
 			"failed to add product inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
@@ -186,11 +213,24 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 
 	res, err := a.application.ProductController.ProductPut(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "failed to update product inventory", zap.Error(err))
+
+		var statusCode int
+		var statusCodeMessage string
+
+		if errors.Is(err, apperrors.ErrNotFound) {
+			logger.Warn(ctx, "product inventory not found", zap.Error(err))
+			statusCode = fiber.StatusNotFound
+			statusCodeMessage = fiber.ErrNotFound.Message
+		} else {
+			logger.Error(ctx, "failed to update product inventory ", zap.Error(err))
+			statusCode = fiber.StatusInternalServerError
+			statusCodeMessage = fiber.ErrInternalServerError.Message
+		}
+
 		errorResponse := external.NewResponseError(ctx,
-			fiber.StatusNotFound,
-			fiber.ErrNotFound,
-			fiber.ErrNotFound.Message,
+			statusCode,
+			fiber.NewError(statusCode),
+			statusCodeMessage,
 			"failed to update product inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
@@ -252,11 +292,23 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 
 	res, err := a.application.ProductController.InventoryPatch(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "failed to update inventory", zap.Error(err))
+		var statusCode int
+		var statusCodeMessage string
+
+		if errors.Is(err, apperrors.ErrNotFound) {
+			logger.Warn(ctx, "inventory not found", zap.Error(err))
+			statusCode = fiber.StatusNotFound
+			statusCodeMessage = fiber.ErrNotFound.Message
+		} else {
+			logger.Error(ctx, "failed to update inventory ", zap.Error(err))
+			statusCode = fiber.StatusInternalServerError
+			statusCodeMessage = fiber.ErrInternalServerError.Message
+		}
+
 		errorResponse := external.NewResponseError(ctx,
-			fiber.StatusNotFound,
-			fiber.ErrNotFound,
-			fiber.ErrNotFound.Message,
+			statusCode,
+			fiber.NewError(statusCode),
+			statusCodeMessage,
 			"failed to update inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
