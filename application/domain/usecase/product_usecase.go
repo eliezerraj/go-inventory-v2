@@ -88,12 +88,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 
 	res_product, err = p.productRepository.ProductAdd(ctx, tx, product)
 	if err != nil {
-		logger.Error(ctx, "product usecase ProductAdd failed", zap.Error(err))
-		return nil, err
-	}
-
-	if err != nil {
-		logger.Error(ctx, "product usecase ProductAdd failed to commit transaction", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductAdd failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -102,7 +97,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 		product.Inventory.CreatedAt = &createAt
 		inv, err := p.inventoryPriceRepository.InventoryAdd(ctx, tx, *product.Inventory)
 		if err != nil {
-			logger.Error(ctx, "product usecase ProductAdd failed to add inventory", zap.Error(err))
+			logger.Debug(ctx, "product usecase ProductAdd failed to add inventory", zap.Error(err))
 			return nil, err
 		}
 		res_product.Inventory = inv
@@ -116,7 +111,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 
 		price, err := p.inventoryPriceRepository.PriceAdd(ctx, tx, *product.Price)
 		if err != nil {
-			logger.Error(ctx, "product usecase ProductAdd failed to add price", zap.Error(err))
+			logger.Debug(ctx, "product usecase ProductAdd failed to add price", zap.Error(err))
 			return nil, err
 		}
 
@@ -137,21 +132,21 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 	// Get product
 	res, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product usecase ProductGet failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductGet failed", zap.Error(err))
 		return nil, err
 	}
 
 	// Get inventory and price for the product
 	inv, err := p.inventoryPriceRepository.InventoryGet(ctx, entity.Inventory{ProductId: res.ID})
 	if err != nil {
-		logger.Warn(ctx, "product usecase ProductGet failed to get inventory", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductGet failed to get inventory", zap.Error(err))
 	}
 	res.Inventory = inv
 
 	// Get price for the product
 	price, err := p.inventoryPriceRepository.PriceGet(ctx, entity.Price{ProductId: res.ID})
 	if err != nil {
-		logger.Warn(ctx, "product usecase ProductGet failed to get price", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductGet failed to get price", zap.Error(err))
 	}
 	res.Price = price
 
@@ -189,7 +184,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Check if the product exists before updating
 	res_prod, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -200,19 +195,19 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Update product
 	upd_prod, err := p.productRepository.ProductPut(ctx, tx, product)
 	if err != nil {
-		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
 	if upd_prod == 0{
-		logger.Warn(ctx, "product usecase ProductPut: no rows affected, product not found", zap.Int("product_id", product.ID))
+		logger.Debug(ctx, "product usecase ProductPut: no rows affected, product not found", zap.Int("product_id", product.ID))
 		return nil, errors.New("product not found")
 	}
 
 	// Update price
 	res_price, err := p.inventoryPriceRepository.PriceGet(ctx, entity.Price{ProductId: res_prod.ID})
 	if err != nil {
-		logger.Warn(ctx, "product usecase ProductPut failed to get inventory", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductPut failed to get inventory", zap.Error(err))
 		return nil, err
 	}
 
@@ -230,12 +225,12 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	// Update price
 	upd_price, err := p.inventoryPriceRepository.PricePut(ctx, tx, *product.Price)
 	if err != nil {
-		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
 	if upd_price == 0{
-		logger.Warn(ctx, "product usecase ProductPut: no rows affected, price not found", zap.Int("product_id", product.ID))
+		logger.Debug(ctx, "product usecase ProductPut: no rows affected, price not found", zap.Int("product_id", product.ID))
 		return nil, errors.New("price not found")
 	}
 
@@ -244,12 +239,12 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	product.Inventory.UpdatedAt = &updatedAt
 	upd_inv, err := p.inventoryPriceRepository.InventoryPut(ctx, tx, *product.Inventory)
 	if err != nil {
-		logger.Error(ctx, "product usecase ProductPut failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
 	if upd_inv == 0{
-		logger.Warn(ctx, "product usecase ProductPut: no rows affected, inventory not found", zap.Int("product_id", product.ID))
+		logger.Debug(ctx, "product usecase ProductPut: no rows affected, inventory not found", zap.Int("product_id", product.ID))
 		return nil, errors.New("inventory not found")
 	}
 	
@@ -287,7 +282,7 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	// Get the product to ensure it exists and retrieve its ID
 	res_prod, err := p.productRepository.ProductGet(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product usecase InventoryPatch failed to get product", zap.Error(err))
+		logger.Debug(ctx, "product usecase InventoryPatch failed to get product", zap.Error(err))
 		return nil, err
 	}
 
@@ -298,7 +293,7 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	// Get the inventory to ensure it exists and retrieve its ID
 	res_inv, err := p.inventoryPriceRepository.InventoryGet(ctx, inventory)
 	if err != nil {
-		logger.Error(ctx, "product usecase InventoryPatch failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase InventoryPatch failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -309,12 +304,12 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	// Update inventory
 	upd_inv, err := p.inventoryPriceRepository.InventoryPatch(ctx, tx, *product.Inventory)
 	if err != nil {
-		logger.Error(ctx, "product usecase InventoryPatch failed", zap.Error(err))
+		logger.Debug(ctx, "product usecase InventoryPatch failed", zap.Error(err))
 		return nil, err
 	}
 
 	if upd_inv == 0{
-		logger.Warn(ctx, "product usecase InventoryPatch: no rows affected, inventory not found", zap.Int("product_id", product.Inventory.ProductId))
+		logger.Debug(ctx, "product usecase InventoryPatch: no rows affected, inventory not found", zap.Int("product_id", product.Inventory.ProductId))
 		return nil, errors.New("inventory not found")
 	}
 

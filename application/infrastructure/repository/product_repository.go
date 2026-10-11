@@ -1,18 +1,19 @@
 package repository
 
 import (
+	"fmt"
 	"time"
 	"context"
-	"errors"
 	"go.uber.org/zap"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/go-inventory-v2/application/domain/entity"
+	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/domain/apperrors"
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/database/connector"
-	"github.com/go-inventory-v2/application/tracing"
 
 	"go.opentelemetry.io/otel"
 
@@ -73,7 +74,7 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, tx pgx.Tx, product e
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "product repository ProductAdd failed", zap.Error(err))
+			logger.Debug(ctx, "product repository ProductAdd failed", zap.Error(err))
 		}
         histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("operation", "ProductAdd"),
@@ -120,7 +121,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "product repository ProductGet failed", zap.Error(err))
+			logger.Debug(ctx, "product repository ProductGet failed", zap.Error(err))
 		}
         histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("operation", "ProductGet"),
@@ -169,9 +170,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 		}
 		res_product = &product
 	} else {
-		logger.Warn(ctx, "not found", zap.String("sku", product.Sku))
-		err = errors.New("product not found")
-		return nil, err
+		return nil, fmt.Errorf("product: %s: %w", product.Sku, apperrors.ErrNotFound)
 	}
 
 	return res_product, nil
@@ -198,7 +197,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product e
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "product repository ProductPut failed", zap.Error(err))
+			logger.Debug(ctx, "product repository ProductPut failed", zap.Error(err))
 		}
         histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("operation", "ProductPut"),
@@ -221,7 +220,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product e
 	}
 
 	if row.RowsAffected() == 0 {
-		logger.Warn(ctx, "product repository ProductPut: no rows affected, product not found", zap.Int("product_id", product.ID))
+		logger.Debug(ctx, "product repository ProductPut: no rows affected, product not found", zap.Int("product_id", product.ID))
 		return 0, nil
 	}
 

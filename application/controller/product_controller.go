@@ -74,7 +74,7 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 	// Call the use case to add the product
 	res, err := p.productUseCase.ProductAdd(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product controller ProductAdd failed", zap.Error(err))
+		logger.Debug(ctx, "product controller ProductAdd failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -96,7 +96,7 @@ func (p *ProductController) ProductGet(ctx context.Context, req external.Product
 	// Call the use case to get the product
 	res, err := p.productUseCase.ProductGet(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product controller ProductGet failed", zap.Error(err))
+		logger.Debug(ctx, "product controller ProductGet failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -140,7 +140,7 @@ func (p *ProductController) ProductPut(ctx context.Context, req external.Product
 	// Call the use case to update the product
 	res, err := p.productUseCase.ProductPut(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product controller ProductPut failed", zap.Error(err))
+		logger.Debug(ctx, "product controller ProductPut failed", zap.Error(err))
 		return nil, err
 	}
 
@@ -175,7 +175,7 @@ func (p *ProductController) InventoryPatch(ctx context.Context, req external.Pro
 	// Call the use case to patch the inventory
 	res, err := p.productUseCase.InventoryPatch(ctx, product)
 	if err != nil {
-		logger.Error(ctx, "product controller InventoryPatch failed", zap.Error(err))
+		logger.Debug(ctx, "product controller InventoryPatch failed", zap.Error(err))
 		return nil, err
 	}
 

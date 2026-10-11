@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"context"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/go-inventory-v2/application/domain/entity"
 	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/domain/apperrors"
 
 	"github.com/eliezerraj/go-core/v3/logger"
 	"github.com/eliezerraj/go-core/v3/database/connector"
@@ -75,7 +77,7 @@ func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, tx pgx.Tx
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "inventory price repository InventoryAdd failed", zap.Error(err))
+			logger.Debug(ctx, "inventory price repository InventoryAdd failed", zap.Error(err))
 		}
         histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("operation", "InventoryAdd"),
@@ -119,7 +121,7 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "inventory price repository InventoryGet failed", zap.Error(err))
+			logger.Debug(ctx, "inventory price repository InventoryGet failed", zap.Error(err))
 		}
         histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("operation", "InventoryGet"),
@@ -141,7 +143,7 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 	var inv entity.Inventory
 	err = connectorReader.QueryRow(ctx, query, inventory.ProductId).Scan(&inv.ID, &inv.ProductId, &inv.Available, &inv.Pending, &inv.Sold, &inv.CreatedAt, &inv.UpdatedAt)
 	if err != nil {
-		logger.Warn(ctx, "failed to get inventory record", zap.Error(err))
+		err = apperrors.ErrNotFound
 		return nil, err
 	}
 
@@ -169,7 +171,7 @@ func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, tx pgx.Tx
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "inventory price repository InventoryPut failed", zap.Error(err))
+			logger.Debug(ctx, "inventory price repository InventoryPut failed", zap.Error(err))
 		}
 		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
 			attribute.String("operation", "InventoryPut"),
@@ -213,7 +215,7 @@ func (ipr *InventoryPriceRepository) InventoryPatch(ctx context.Context, tx pgx.
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "inventory price repository InventoryPatch failed", zap.Error(err))
+			logger.Debug(ctx, "inventory price repository InventoryPatch failed", zap.Error(err))
 		}
         histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
             attribute.String("operation", "InventoryPatch"),
@@ -233,7 +235,7 @@ func (ipr *InventoryPriceRepository) InventoryPatch(ctx context.Context, tx pgx.
 	}
 
 	if row.RowsAffected() == 0 {
-		logger.Warn(ctx, "inventory price repository InventoryPatch: no rows affected, inventory not found", zap.Int("inventory_id", inventory.ID))
+		logger.Debug(ctx, "inventory price repository InventoryPatch: no rows affected, inventory not found", zap.Int("inventory_id", inventory.ID))
 		return 0, nil
 	}
 
@@ -262,8 +264,7 @@ func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "inventory price repository PriceGet failed", zap.Error(err))
-			logger.Error(ctx, "inventory price repository PriceGet failed", zap.Error(err))
+			logger.Debug(ctx, "inventory price repository PriceGet failed", zap.Error(err))
 		}
 		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
 			attribute.String("operation", "PriceGet"),
@@ -280,8 +281,7 @@ func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.
 	var pr entity.Price
 	err = connectorReader.QueryRow(ctx, query, price.ProductId).Scan(&pr.ID, &pr.ProductId, &pr.Amount, &pr.Currency, &pr.StartedAt, &pr.EndedAt, &pr.CreatedAt, &pr.UpdatedAt)
 	if err != nil {
-		logger.Warn(ctx, "failed to get price record", zap.Error(err))
-		return nil, err
+		return nil, fmt.Errorf("price for product id: %d: %w", price.ProductId, apperrors.ErrNotFound)
 	}
 
 	return &pr, nil
@@ -354,7 +354,7 @@ func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, tx pgx.Tx, pr
 		if err != nil {
 			span.RecordError(err) 
 			span.SetStatus(codes.Error, err.Error())
-			logger.Error(ctx, "inventory price repository PricePut failed", zap.Error(err))
+			logger.Debug(ctx, "inventory price repository PricePut failed", zap.Error(err))
 		}
 		histogram.Record(ctx, time.Since(start).Seconds(), metric.WithAttributes(
 			attribute.String("operation", "PricePut"),
