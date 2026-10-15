@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type ApplicationAdapter struct {
@@ -95,6 +96,9 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
 			"failed to get product inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+				attribute.Int("http.response.status_code", statusCode),
+		)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -102,7 +106,9 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
 		Response: "Product inventory retrieved successfully",
 		Product: res,
 	}
-
+	span.SetAttributes(
+			attribute.Int("http.response.status_code", fiber.StatusOK),
+	)
 	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
 }
 
@@ -136,6 +142,9 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 			"failed to parse request body",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+	span.SetAttributes(
+			attribute.Int("http.response.status_code", fiber.StatusBadRequest),
+	)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -161,6 +170,9 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 			"failed to add product inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", statusCode),
+		)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -168,7 +180,9 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 		Response: "Product inventory added successfully",
 		Product: res,
 	}
-
+	span.SetAttributes(
+		attribute.Int("http.response.status_code", fiber.StatusCreated),
+	)
 	return ctxFiber.Status(fiber.StatusCreated).JSON(resp)
 }
 
@@ -201,6 +215,9 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 			"failed to parse request body",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", fiber.StatusBadRequest),
+		)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -234,6 +251,9 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 			"failed to update product inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", statusCode),
+		)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -241,7 +261,9 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 		Response: "Product inventory updated successfully",
 		Product: res,
 	}
-
+	span.SetAttributes(
+		attribute.Int("http.response.status_code", fiber.StatusOK),
+	)
 	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
 }
 
@@ -275,6 +297,9 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 			"failed to parse request body",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", fiber.StatusBadRequest),
+		)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -312,6 +337,9 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 			"failed to update inventory",
 			err.Error(),
 			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", statusCode),
+		)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
 	}
 
@@ -320,5 +348,8 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 		Product: res,
 	}
 
+	span.SetAttributes(
+		attribute.Int("http.response.status_code", fiber.StatusOK),
+	)
 	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
 }
