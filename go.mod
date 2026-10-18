@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/caarlos0/env/v8 v8.0.0
-	github.com/eliezerraj/go-core/v3 v3.0.0-20261015165848-6855db2dd0e3
+	github.com/eliezerraj/go-core/v3 v3.0.0-20261018211515-801ed47629cc
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/contrib/v3/prometheus v0.0.5
 	github.com/gofiber/fiber/v2 v2.52.15
@@ -22,6 +22,7 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cedar-policy/cedar-go v1.8.0 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
@@ -76,6 +77,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3 // indirect
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
