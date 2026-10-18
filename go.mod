@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/caarlos0/env/v8 v8.0.0
-	github.com/eliezerraj/go-core/v3 v3.0.0-20261018211515-801ed47629cc
+	github.com/eliezerraj/go-core/v3 v3.0.0-20261018223325-ce12dd39da34
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/contrib/v3/prometheus v0.0.5
 	github.com/gofiber/fiber/v2 v2.52.15
