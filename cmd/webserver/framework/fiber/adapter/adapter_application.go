@@ -43,7 +43,7 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productGet", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	// Debugging: Log the incoming traceparent header for tracing purposes
@@ -119,7 +119,7 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productAdd", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(
@@ -192,7 +192,7 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.productPut", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productPut", trace.SpanKindInternal)
 	defer span.End()
 	
 	logger.Debug(
@@ -274,7 +274,7 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "productController.inventoryPatch", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(

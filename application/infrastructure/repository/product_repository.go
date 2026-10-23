@@ -58,7 +58,7 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, tx pgx.Tx, product e
 	logger.Info(ctx, "product repository ProductAdd called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productRepository.productAdd", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -105,7 +105,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	logger.Info(ctx, "product repository ProductGet called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productRepository.productGet", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.productGet", trace.SpanKindInternal)
 	defer span.End()
 
     meter := otel.Meter("go-inventory-v2.repository")
@@ -180,7 +180,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product e
 	logger.Info(ctx, "product repository ProductPut called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productRepository.productPut", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.productPut", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")

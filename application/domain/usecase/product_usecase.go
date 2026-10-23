@@ -57,7 +57,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductAdd called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.ProductAdd", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	// Begin transaction
@@ -126,7 +126,7 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductGet called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.ProductGet", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	// Get product
@@ -157,7 +157,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductPut called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.ProductPut", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.productPut", trace.SpanKindInternal)
 	defer span.End()
 
 	// Start tx
@@ -255,7 +255,7 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	logger.Info(ctx, "product usecase InventoryPatch called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "productUsecase.InventoryPatch", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	// Begin transaction
