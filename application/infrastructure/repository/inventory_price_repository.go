@@ -60,7 +60,7 @@ func (ipr *InventoryPriceRepository) InventoryAdd(ctx context.Context, tx pgx.Tx
 	logger.Info(ctx, "inventory price repository InventoryAdd called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryAdd", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.inventoryAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -105,7 +105,7 @@ func (ipr *InventoryPriceRepository) InventoryGet(ctx context.Context, inventory
 	logger.Info(ctx, "inventory price repository InventoryGet called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryGet", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.inventoryGet", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -154,7 +154,7 @@ func (ipr *InventoryPriceRepository) InventoryPut(ctx context.Context, tx pgx.Tx
 	logger.Info(ctx, "inventory price repository InventoryPut called", zap.Any("inventory", inventory))
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryPut", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.inventoryPut", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -199,7 +199,7 @@ func (ipr *InventoryPriceRepository) InventoryPatch(ctx context.Context, tx pgx.
 	logger.Info(ctx, "inventory price repository InventoryPatch called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.inventoryPatch", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -247,7 +247,7 @@ func (ipr *InventoryPriceRepository) PriceGet(ctx context.Context, price entity.
 	logger.Info(ctx, "inventory price repository PriceGet called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.priceGet", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.priceGet", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -291,7 +291,7 @@ func (ipr *InventoryPriceRepository) PriceAdd(ctx context.Context, tx pgx.Tx, pr
 	logger.Info(ctx, "inventory price repository PriceAdd called")
 
 	// Start tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.priceAdd", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.priceAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -337,7 +337,7 @@ func (ipr *InventoryPriceRepository) PricePut(ctx context.Context, tx pgx.Tx, pr
 	logger.Info(ctx, "inventory price repository PricePut called", zap.Any("price", price))
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "inventoryPriceRepository.pricePut", trace.SpanKindInternal)
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.pricePut", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
