@@ -47,5 +47,5 @@ data:
   AUTHORIZATION_HEADER_KEY: "Authorization"
   AUTHORIZATION_REQUIRED_HEADER: "false"
 
-  OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-01-02-otel-collector.default.svc.cluster.local:4317"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "arch-eks-002-otel-collector.default.svc.cluster.local:4317"
   OTEL_METRICS_PORT: "8000"
