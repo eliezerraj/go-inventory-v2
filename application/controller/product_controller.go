@@ -181,3 +181,31 @@ func (p *ProductController) InventoryPatch(ctx context.Context, req external.Pro
 
 	return res, nil
 }
+
+func (p *ProductController) PricePatch(ctx context.Context, req external.ProductRequest) (*entity.Product, error) {
+	logger.Info(ctx, "product controller PricePatch called")
+
+	// Tracing and metrics
+	ctx, span := tracing.CustomStartSpanCtx(ctx, "controller.pricePatch", trace.SpanKindInternal)
+	defer span.End()
+
+	product := entity.Product{
+		ID:  req.ID,
+		Sku: req.Sku,
+	}
+
+	price := entity.Price{
+		Currency:    req.Price.Currency,
+		Amount:      req.Price.Amount,
+	}
+	product.Price = &price
+
+	// Call the use case to patch the price
+	res, err := p.productUseCase.PricePatch(ctx, product)
+	if err != nil {
+		logger.Debug(ctx, "product controller PricePatch failed", zap.Error(err))
+		return nil, err
+	}
+
+	return res, nil
+}

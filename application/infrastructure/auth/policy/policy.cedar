@@ -91,3 +91,14 @@ when {
         "order-all-role"
     )
 };
+
+permit(
+    principal,
+    action == Action::"patch:price",
+    resource
+)
+when {
+    principal.scopes.contains(
+        "inventory:update"
+    )
+};

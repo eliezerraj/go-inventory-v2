@@ -160,4 +160,9 @@ func (s *FiberServer) SetupRoutes(cfg *config.Config, application *application.A
 					authService.FiberAuthorizationMiddleware(),
 					clientCedar.FiberPolicyEvaluationMiddleware("patch:inventory"),
 					middleware.MetricsMiddleware(adapters.applicationAdp.InventoryPatch))
+					
+	appRoutes.Patch("/product/price/:sku", 
+					authService.FiberAuthorizationMiddleware(),
+					clientCedar.FiberPolicyEvaluationMiddleware("patch:price"),
+					middleware.MetricsMiddleware(adapters.applicationAdp.PricePatch))
 }
