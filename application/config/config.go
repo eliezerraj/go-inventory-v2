@@ -45,9 +45,12 @@ type Authorization struct {
 	PolicyPath			string `env:"AUTHORIZATION_POLICY_PATH"`
 	HeaderKey 			string `env:"AUTHORIZATION_HEADER_KEY,required"`
 	DryRun  			bool   `env:"AUTHORIZATION_DRY_RUN,required"`
+	AuthorizationServer string `env:"AUTHORIZATION_SERVER"`
 	JwksURL 			string `env:"AUTHORIZATION_JWKS_URL"`
 	RequiredAuthHeader  bool   `env:"AUTHORIZATION_REQUIRED_HEADER"`
-	Timeout             time.Duration `env:"AUTHENTICATION_TIMEOUT" envDefault:"15s"`
+	Audience 			string `env:"AUTHORIZATION_AUDIENCE"`
+	ResourceMetadata 	string `env:"AUTHORIZATION_OAUTH_PROTECTED_RESOURCE_URL"`
+	Timeout             time.Duration `env:"AUTHORIZATION_TIMEOUT" envDefault:"15s"`
 }
 
 type App struct {

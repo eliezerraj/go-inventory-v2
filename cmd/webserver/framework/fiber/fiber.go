@@ -111,7 +111,9 @@ func (s *FiberServer) SetupRoutes(cfg *config.Config, application *application.A
 	authService := auth.NewAuthService(	cfg.Authorization.JwksURL, 
 										cfg.Authorization.DryRun, 
 										cfg.Authorization.HeaderKey, 
-										cfg.Authorization.Timeout)
+										cfg.Authorization.Timeout,
+										cfg.Authorization.Audience,
+										cfg.Authorization.ResourceMetadata)
 
 	logger.Info(context.Background(), "setting up routes ...0")
 
@@ -129,6 +131,7 @@ func (s *FiberServer) SetupRoutes(cfg *config.Config, application *application.A
 	// Create adapters for controllers						
 	adapters := newAdapters(s.cfg, application)
 	root.Get("/health", adapters.metadataAdp.HealthGet)
+	root.Get("/.well-known/oauth-protected-resource", adapters.metadataAdp.ResourceMetadata)
 
 	// Create a group for version 1 of the API
 	appRoutes := root.Group("/v1")
@@ -138,7 +141,7 @@ func (s *FiberServer) SetupRoutes(cfg *config.Config, application *application.A
 	appRoutes.Get("/info", adapters.metadataAdp.InfoGet)
 	appRoutes.Get("/echo-header", adapters.metadataAdp.HeadersGet)
 	appRoutes.Get("/echo-context", adapters.metadataAdp.ContextGet)
-	
+
 	logger.Info(context.Background(), "setting up routes ...2")
 	
 	appRoutes.Get("/product/:sku",

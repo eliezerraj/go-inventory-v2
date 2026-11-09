@@ -10,7 +10,7 @@ import (
 	"github.com/go-inventory-v2/application/domain/usecase"
 	"github.com/go-inventory-v2/application/domain/external"
 	"github.com/go-inventory-v2/application/domain/entity"
-	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/infrastructure/observability"
 	"github.com/go-inventory-v2/application/controller/validator"
 
 	"go.opentelemetry.io/otel/trace"
@@ -41,7 +41,7 @@ func (p *ProductController) ProductAdd(ctx context.Context, req external.Product
 	logger.Info(ctx, "product controller ProductAdd called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "controller.productAdd", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "controller.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	// Schema validation
@@ -85,7 +85,7 @@ func (p *ProductController) ProductGet(ctx context.Context, req external.Product
 	logger.Info(ctx, "product controller ProductGet called", zap.String("sku", req.Sku))
 	
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "controller.productGet", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "controller.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	product := entity.Product{
@@ -107,7 +107,7 @@ func (p *ProductController) ProductPut(ctx context.Context, req external.Product
 	logger.Info(ctx, "product controller ProductPut called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "controller.productPut", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "controller.productPut", trace.SpanKindInternal)
 	defer span.End()
 	
 	// Schema validation
@@ -151,7 +151,7 @@ func (p *ProductController) InventoryPatch(ctx context.Context, req external.Pro
 	logger.Info(ctx, "product controller InventoryPatch called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "controller.inventoryPatch", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "controller.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 	
 	// Schema validation
@@ -186,7 +186,7 @@ func (p *ProductController) PricePatch(ctx context.Context, req external.Product
 	logger.Info(ctx, "product controller PricePatch called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "controller.pricePatch", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "controller.pricePatch", trace.SpanKindInternal)
 	defer span.End()
 
 	product := entity.Product{

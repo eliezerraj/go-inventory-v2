@@ -9,7 +9,7 @@ import (
 	"github.com/go-inventory-v2/application/config"
 	"github.com/go-inventory-v2/application/infrastructure/application"
 	"github.com/go-inventory-v2/application/domain/external"
-	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/infrastructure/observability"
 	"github.com/go-inventory-v2/application/domain/apperrors"
 
 	"github.com/eliezerraj/go-core/v3/logger"
@@ -43,7 +43,7 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productGet", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	// Debugging: Log the incoming traceparent header for tracing purposes
@@ -119,7 +119,7 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productAdd", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(
@@ -192,7 +192,7 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productPut", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.productPut", trace.SpanKindInternal)
 	defer span.End()
 	
 	logger.Debug(
@@ -274,7 +274,7 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.inventoryPatch", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(
@@ -361,7 +361,7 @@ func (a *ApplicationAdapter) PricePatch(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.pricePatch", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.pricePatch", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(
