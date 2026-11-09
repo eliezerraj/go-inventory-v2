@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/go-inventory-v2/application/domain/entity"
-	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/infrastructure/observability"
 	"github.com/go-inventory-v2/application/domain/apperrors"
 
 	"github.com/eliezerraj/go-core/v3/logger"
@@ -58,7 +58,7 @@ func (p *ProductRepository) ProductAdd(ctx context.Context, tx pgx.Tx, product e
 	logger.Info(ctx, "product repository ProductAdd called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.productAdd", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "repository.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")
@@ -105,7 +105,7 @@ func (p *ProductRepository) ProductGet(ctx context.Context, product entity.Produ
 	logger.Info(ctx, "product repository ProductGet called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.productGet", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "repository.productGet", trace.SpanKindInternal)
 	defer span.End()
 
     meter := otel.Meter("go-inventory-v2.repository")
@@ -180,7 +180,7 @@ func (p *ProductRepository) ProductPut(ctx context.Context, tx pgx.Tx, product e
 	logger.Info(ctx, "product repository ProductPut called")
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "repository.productPut", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "repository.productPut", trace.SpanKindInternal)
 	defer span.End()
 
 	meter := otel.Meter("go-inventory-v2.repository")

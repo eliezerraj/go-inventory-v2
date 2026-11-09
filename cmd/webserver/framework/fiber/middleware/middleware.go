@@ -22,7 +22,6 @@ const RequestIDHeaderName = "x-request-id"
 // HeaderMiddleware is a middleware function that sets security and CORS headers for the response.
 func HeaderMiddleware() fiber.Handler {
 	logger.Info(context.Background(), "registering HeaderMiddleware for fiber server SUCCESSFULLY")
-
 	return func(c fiber.Ctx) error {
 
 		c.Accepts("application/json")

@@ -11,11 +11,12 @@ import (
 
 	"github.com/go-inventory-v2/application/domain/entity"
 	"github.com/go-inventory-v2/application/infrastructure/repository"
-	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/infrastructure/observability"
 
 	"github.com/jackc/pgx/v5"
 
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type ProductUsecase struct {
@@ -29,6 +30,7 @@ type IProductUseCase interface {
 	ProductGet(ctx context.Context, product entity.Product) (*entity.Product, error)
 	ProductPut(ctx context.Context, product entity.Product) (*entity.Product, error)
 	InventoryPatch(ctx context.Context, product entity.Product) (*entity.Product, error)
+	PricePatch(ctx context.Context, product entity.Product) (*entity.Product, error)
 }
 
 func NewProductUseCase(productRepository repository.IProductRepository, 
@@ -57,7 +59,7 @@ func (p *ProductUsecase) ProductAdd(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductAdd called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.productAdd", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "usecase.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	// Begin transaction
@@ -126,7 +128,7 @@ func (p *ProductUsecase) ProductGet(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductGet called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.productGet", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "usecase.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	// Get product
@@ -157,7 +159,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 	logger.Info(ctx, "product usecase ProductPut called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.productPut", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "usecase.productPut", trace.SpanKindInternal)
 	defer span.End()
 
 	// Start tx
@@ -188,6 +190,7 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 		return nil, err
 	}
 
+	// Set product ID and updated timestamp
 	product.ID = res_prod.ID
 	updatedAt := time.Now().UTC()
 	product.UpdatedAt = &updatedAt
@@ -245,7 +248,10 @@ func (p *ProductUsecase) ProductPut(ctx context.Context, product entity.Product)
 
 	if upd_inv == 0{
 		logger.Debug(ctx, "product usecase ProductPut: no rows affected, inventory not found", zap.Int("product_id", product.ID))
-		return nil, errors.New("inventory not found")
+		err = errors.New("inventory not found during update")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 	
 	return &product, nil
@@ -255,7 +261,7 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	logger.Info(ctx, "product usecase InventoryPatch called")
 
 	// Tracer for OpenTelemetry
-	ctx, span := tracing.CustomStartSpanCtx(ctx, "usecase.inventoryPatch", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctx, "usecase.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	// Begin transaction
@@ -311,6 +317,80 @@ func (p *ProductUsecase) InventoryPatch(ctx context.Context, product entity.Prod
 	if upd_inv == 0{
 		logger.Debug(ctx, "product usecase InventoryPatch: no rows affected, inventory not found", zap.Int("product_id", product.Inventory.ProductId))
 		return nil, errors.New("inventory not found")
+	}
+
+	return &product, nil
+}
+
+func (p *ProductUsecase) PricePatch(ctx context.Context, product entity.Product) (res_product *entity.Product, err error) {
+	logger.Info(ctx, "product usecase PricePatch called")
+
+	// Tracer for OpenTelemetry
+	ctx, span := observability.CustomStartSpanCtx(ctx, "usecase.pricePatch", trace.SpanKindInternal)
+	defer span.End()
+
+	// Begin transaction
+	tx, err := p.productRepository.BeginTx(ctx, pgx.TxOptions{ IsoLevel: pgx.ReadCommitted, AccessMode: pgx.ReadWrite })
+	if err != nil {
+		logger.Error(ctx, "product usecase PricePatch failed to begin transaction", zap.Error(err))
+		return nil, err
+	}
+
+	// Defer rollback or commit based on the outcome of the operation
+	defer func() {
+		if err != nil {
+			if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && rollbackErr != pgx.ErrTxClosed {
+				logger.Error(ctx, "product usecase PricePatch failed to rollback transaction", zap.Error(rollbackErr))
+			}
+		} else {
+			if commitErr := tx.Commit(ctx); commitErr != nil {
+				logger.Error(ctx, "product usecase PricePatch failed to commit transaction", zap.Error(commitErr))
+				err = commitErr
+			}
+		}
+	}()
+
+	// Get the product to ensure it exists and retrieve its ID
+	res_prod, err := p.productRepository.ProductGet(ctx, product)
+	if err != nil {
+		logger.Debug(ctx, "product usecase PricePatch failed to get product", zap.Error(err))
+		return nil, err
+	}
+
+	price := entity.Price{
+		ProductId: res_prod.ID,
+	}
+
+	// Get the price to ensure it exists and retrieve its ID
+	res_price, err := p.inventoryPriceRepository.PriceGet(ctx, price)
+	if err != nil {
+		logger.Debug(ctx, "product usecase PricePatch failed", zap.Error(err))
+		return nil, err
+	}
+
+	product.Price.ProductId = res_prod.ID
+	product.Price.ID = res_price.ID
+	updatedAt := time.Now().UTC()
+	product.Price.StartedAt = &updatedAt
+	product.Price.UpdatedAt = &updatedAt
+	if product.Price.EndedAt == nil {
+		endedAt := updatedAt.Add(90 * 24 * time.Hour)
+		product.Price.EndedAt = &endedAt
+	}
+
+	// Update price
+	upd_price, err := p.inventoryPriceRepository.PricePut(ctx, tx, *product.Price)
+	if err != nil {
+		logger.Debug(ctx, "product usecase PricePatch failed", zap.Error(err))
+		return nil, err
+	}
+
+	if upd_price == 0 {
+		logger.Debug(ctx, "product usecase PricePatch: no rows affected, price not found", zap.Int("product_id", product.Price.ProductId))
+		err = errors.New("price not found during update")
+		span.RecordError(err) 
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
 	}
 
 	return &product, nil

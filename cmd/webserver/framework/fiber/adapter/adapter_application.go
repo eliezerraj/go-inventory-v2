@@ -9,7 +9,7 @@ import (
 	"github.com/go-inventory-v2/application/config"
 	"github.com/go-inventory-v2/application/infrastructure/application"
 	"github.com/go-inventory-v2/application/domain/external"
-	"github.com/go-inventory-v2/application/tracing"
+	"github.com/go-inventory-v2/application/infrastructure/observability"
 	"github.com/go-inventory-v2/application/domain/apperrors"
 
 	"github.com/eliezerraj/go-core/v3/logger"
@@ -43,7 +43,7 @@ func (a *ApplicationAdapter) ProductGet(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productGet", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.productGet", trace.SpanKindInternal)
 	defer span.End()
 
 	// Debugging: Log the incoming traceparent header for tracing purposes
@@ -119,7 +119,7 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productAdd", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.productAdd", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(
@@ -142,7 +142,7 @@ func (a *ApplicationAdapter) ProductAdd(ctxFiber fiber.Ctx) error {
 			"failed to parse request body",
 			err.Error(),
 			external.BUSSINESS_ERROR)
-	span.SetAttributes(
+		span.SetAttributes(
 			attribute.Int("http.response.status_code", fiber.StatusBadRequest),
 	)
 		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
@@ -192,7 +192,7 @@ func (a *ApplicationAdapter) ProductPut(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.productPut", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.productPut", trace.SpanKindInternal)
 	defer span.End()
 	
 	logger.Debug(
@@ -274,7 +274,7 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 	defer cancel()
 
 	// Tracing and metrics
-	ctx, span := tracing.CustomStartSpanCtx(ctxWithTimeout, "adapter.inventoryPatch", trace.SpanKindInternal)
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.inventoryPatch", trace.SpanKindInternal)
 	defer span.End()
 
 	logger.Debug(
@@ -345,6 +345,93 @@ func (a *ApplicationAdapter) InventoryPatch(ctxFiber fiber.Ctx) error {
 
 	resp := external.ProductResponse{
 		Response: "Inventory updated successfully",
+		Product: res,
+	}
+
+	span.SetAttributes(
+		attribute.Int("http.response.status_code", fiber.StatusOK),
+	)
+	return ctxFiber.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (a *ApplicationAdapter) PricePatch(ctxFiber fiber.Ctx) error {
+	logger.Info(ctxFiber.Context(), "PricePatch called")
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctxFiber.Context(), a.cfg.HTTP.Timeout)
+	defer cancel()
+
+	// Tracing and metrics
+	ctx, span := observability.CustomStartSpanCtx(ctxWithTimeout, "adapter.pricePatch", trace.SpanKindInternal)
+	defer span.End()
+
+	logger.Debug(
+		ctx,
+		a.cfg.App.Name,
+		zap.ByteString("headers", utils.FormatHeadersAsJSON(ctxFiber.GetReqHeaders())),
+		zap.String("host", ctxFiber.Hostname()),
+		zap.String("path", ctxFiber.Path()),
+		zap.ByteString("query", ctxFiber.Request().URI().QueryString()),
+		zap.ByteString("body", ctxFiber.Body()),
+	)
+
+	product := external.ProductRequest{}
+	if err := ctxFiber.Bind().Body(&product); err != nil {
+		logger.Error(ctx, "failed to parse request body", zap.Error(err))
+		errorResponse := external.NewResponseError(ctx,
+			fiber.StatusBadRequest,
+			fiber.ErrBadRequest,
+			fiber.ErrBadRequest.Message,
+			"failed to parse request body",
+			err.Error(),
+			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", fiber.StatusBadRequest),
+		)
+		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
+	}
+
+	// Decide whether to get the SKU from the path parameter or the query parameter
+	sku := ctxFiber.Params("sku")
+	if sku == "" {
+		sku = ctxFiber.Query("sku")
+	}
+
+	if id, err := strconv.Atoi(sku); err == nil {
+		product.ID = id
+	} else {
+		product.Sku = sku
+	}
+
+	res, err := a.application.ProductController.PricePatch(ctx, product)
+	if err != nil {
+		var statusCode int
+		var statusCodeMessage string
+
+		if errors.Is(err, apperrors.ErrNotFound) {
+			logger.Warn(ctx, "price not found", zap.Error(err))
+			statusCode = fiber.StatusNotFound
+			statusCodeMessage = fiber.ErrNotFound.Message
+		} else {
+			logger.Error(ctx, "failed to update price", zap.Error(err))
+			statusCode = fiber.StatusInternalServerError
+			statusCodeMessage = fiber.ErrInternalServerError.Message
+		}
+
+		errorResponse := external.NewResponseError(ctx,
+			statusCode,
+			fiber.NewError(statusCode),
+			statusCodeMessage,
+			"failed to update price",
+			err.Error(),
+			external.BUSSINESS_ERROR)
+		span.SetAttributes(
+			attribute.Int("http.response.status_code", statusCode),
+		)
+		return ctxFiber.Status(errorResponse.StatusCode).JSON(errorResponse)
+	}
+
+	resp := external.ProductResponse{
+		Response: "Price updated successfully",
 		Product: res,
 	}
 

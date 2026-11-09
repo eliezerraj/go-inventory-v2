@@ -7,10 +7,10 @@ import (
 type Product struct {
 	ID			int			`json:"id,omitempty"`
 	Sku			string		`json:"sku,omitempty"`
-	Type		string 		`json:"type,omitempty"`
 	Name		string 		`json:"name,omitempty"`
+	Type		string 		`json:"type,omitempty"`	
 	Status		string 		`json:"status,omitempty"`
-	LeadTime	int			`json:"lead_time,omitempty"`
+	LeadTime	*int		`json:"lead_time,omitempty"`
 	Price		*Price		`json:"price,omitempty"`
 	Inventory	*Inventory	`json:"inventory,omitempty"`
 	CreatedAt	*time.Time 	`json:"created_at,omitempty"`
