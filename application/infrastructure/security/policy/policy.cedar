@@ -54,7 +54,7 @@ when {
 
 permit(
     principal,
-    action == Action::"product:update",
+    action == Action::"update:product",
     resource
 )
 when {
@@ -65,7 +65,7 @@ when {
 
 permit(
     principal,
-    action == Action::"product:update",
+    action == Action::"update:product",
     resource
 )
 when {
